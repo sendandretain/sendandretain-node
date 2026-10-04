@@ -140,7 +140,7 @@ export function createClient(opts: ClientOptions) {
     http,
 
     emails: {
-      /** Send a transactional email from a published template. Needs a `write`-scope key. */
+      /** Send a transactional email from a published template. Needs a `write`-scope key **and** the send grant. */
       send: (body: SendEmailBody, options?: SendOptions) =>
         http.POST("/api/v1/emails", {
           body,
@@ -152,7 +152,7 @@ export function createClient(opts: ClientOptions) {
       get: (id: string) => http.GET("/api/v1/emails/{id}", { params: { path: { id } } }),
       /** List messages newest-first. Needs a `write`-scope key. */
       list: (query?: ListEmailsQuery) => http.GET("/api/v1/emails", { params: { query } }),
-      /** Reschedule a scheduled send. */
+      /** Reschedule a scheduled send. Needs a `write`-scope key **and** the send grant. */
       reschedule: (id: string, body: RescheduleEmailBody) =>
         http.PATCH("/api/v1/emails/{id}", { params: { path: { id } }, body }),
       /** Cancel a scheduled send. */
@@ -196,7 +196,8 @@ export function createClient(opts: ClientOptions) {
     /**
      * Template authoring. The loop is create → render → test → publish:
      * drafts can't send, and published versions are immutable, so every edit
-     * produces a new draft you publish deliberately. All need `write` scope.
+     * produces a new draft you publish deliberately. All need `write` scope;
+     * `test` delivers to a real inbox, so it also needs the send grant.
      */
     templates: {
       create: (body: CreateTemplateBody) => http.POST("/api/v1/templates", { body }),
@@ -299,10 +300,13 @@ export function createClient(opts: ClientOptions) {
     },
 
     /**
-     * Sending infrastructure. Needs an `admin`-scope key. Provider API keys
-     * can NOT be set here — they only enter through the dashboard.
+     * Sending infrastructure. Needs an `admin`-scope key (except `onboarding`,
+     * which is `read`). Provider API keys can NOT be set here — they only enter
+     * through the dashboard.
      */
     setup: {
+      /** How far through setup this company is — the next step to take. `read` scope. */
+      onboarding: () => http.GET("/api/v1/setup/onboarding"),
       /** One call for "can this project send right now?". */
       connection: () => http.GET("/api/v1/connection"),
       /** Idempotent; safe to call on every deploy. */

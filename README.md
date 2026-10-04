@@ -55,25 +55,35 @@ createClient({ apiKey, baseUrl?, fetch? });
   `createClient({ apiKey, baseUrl: process.env.SENDANDRETAIN_BASE_URL })`.
 - `fetch` — inject a custom `fetch` for tests or non-Node runtimes.
 
-## Scopes
+## Scopes and the send grant
 
-A key carries exactly one scope, and the scopes are **ranked** — a key satisfies
-any requirement at or below its own tier:
+Authorization has two independent axes.
+
+The **scope** is ranked — a key satisfies any requirement at or below its own
+tier:
 
 | Scope     | Can do                                                                                                                                        |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `read`    | Read-only. Never changes anything, and **cannot send**.                                                                                       |
-| `write`   | Everything `read` does, **plus sending email** and managing contacts, templates, automations, segments and suppressions.                       |
+| `write`   | Everything `read` does, plus managing contacts, templates, automations, segments and suppressions.                                            |
 | `admin`   | Everything `write` does, plus sending _configuration_: domains, senders, webhook registration, the kill switch, the daily cap, and the brand kit. |
 
-**Sending requires `write`.** So does everything under `emails`, `contacts`,
-`events`, `suppressions`, `templates`, `automations`, `audience` and `metrics`.
-`setup.*` and `settings.*` require `admin`. Give your application the lowest
-tier that works — for most applications that is `write`.
+The **send grant** is a separate boolean, not a rung. Delivering mail to a real
+inbox — `emails.send`, `emails.reschedule`, `templates.test` and
+`POST /api/v1/emails/batch` — needs `write` **and** the grant; a key can hold
+`admin` and still be refused there. The dashboard mints that combination as
+**Send + manage**; **Manage only** is the same rung with the grant withheld.
 
-A valid key with an insufficient scope gets `403 forbidden` (not `401`); the
-message names the tier the endpoint wanted and the tier the key has. `401` means
-the key is missing, malformed, or revoked.
+Everything else under `emails`, `contacts`, `events`, `suppressions`,
+`templates`, `automations`, `audience` and `metrics` needs `write`. `setup.*` and
+`settings.*` need `admin`, except `setup.onboarding()`, which is `read`. Give
+your application the lowest tier that works — for most applications that is
+**Send + manage**.
+
+A valid key that falls short gets `403 forbidden` (not `401`). The error body
+says which axis refused it: `required_scope` / `key_scope` for the tier, or
+`required_grant` when the tier was enough but the key lacks the grant. `401`
+means the key is missing, malformed, or revoked.
 
 Provider API keys (Resend / SendGrid) can **not** be set over the API at any
 scope — they only enter through the dashboard.
@@ -92,7 +102,7 @@ The facade mirrors the REST API groups:
 | `automations`        | `create`, `list`, `get`, `update`, `archive`, `setStatus`, `duplicate`, `preflight`, `listRuns`, `metrics`, `setAbTest`, `promoteAbWinner` |
 | `automations.steps`  | `add`, `update`, `remove`, `move`, `syncProps`                                                                      |
 | `audience.segments`  | `create`, `list`, `update`, `delete`, `refreshCount`                                                                |
-| `setup`              | `connection`, `registerWebhooks`, `domains.*`, `senders.*` (`admin`)                                                |
+| `setup`              | `onboarding` (`read`), `connection`, `registerWebhooks`, `domains.*`, `senders.*` (`admin`)                         |
 | `metrics`            | `get`, `trends`, `queueHealth`                                                                                      |
 | `settings`           | `get`, `update`, `getBrand`, `updateBrand` (`admin`)                                                                |
 | `http`               | the underlying `openapi-fetch` client, for anything not on the facade                                               |

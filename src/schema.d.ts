@@ -777,6 +777,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/setup/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How far through setup is this company?
+         * @description The ten steps of getting a company live, with the same addresses (`1.1`–`3.5`) and titles the operator sees in the dashboard. Every `done` is derived from real rows — there is no stored checklist — so work done through this API, over MCP or by hand all move the same list.
+         *
+         *     Distinct from `GET /api/v1/connection`, which answers the narrower deploy-time question 'can this project send right now'. This one also covers the discovery answers, the approved programme and whether the company has sent.
+         */
+        get: operations["getOnboardingSteps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/webhooks/register": {
         parameters: {
             query?: never;
@@ -1158,7 +1180,7 @@ export interface paths {
         head?: never;
         /**
          * Set the kill switch, daily cap, auto-UTM tagging, or default locale
-         * @description `sends_paused: true` stops **all** sending for this project — API, automations and copilot alike — and is re-checked on the worker path, so it stops queued mail too, not just new calls. Because of that it requires `confirm: true`; resuming does not. `utm` configures auto UTM tagging: set the params once and every external link in outgoing emails carries them. `default_locale` is the fallback used to pick a template translation when neither the send call nor the contact carries a locale (null = the base template language). Requires an `admin`-scope key.
+         * @description `sends_paused: true` stops **all** sending for this project — API, automations and copilot alike — and is re-checked on the worker path, so it stops queued mail too, not just new calls. Because of that it requires `confirm: true`; resuming does not. `utm` configures auto UTM tagging, which is **already on** with sensible defaults: send it only to change the params or to switch tagging off. `default_locale` is the fallback used to pick a template translation when neither the send call nor the contact carries a locale (null = the base template language). Requires an `admin`-scope key.
          */
         patch: operations["updateProjectSettings"];
         trace?: never;
@@ -1322,9 +1344,8 @@ export interface components {
             /**
              * @description Exits are immediate — put the wait on the step before.
              * @default 0
-             * @constant
              */
-            delaySeconds: 0;
+            delaySeconds: number;
         } | {
             /** @constant */
             type: "unsubscribe";
@@ -1469,9 +1490,8 @@ export interface components {
             /**
              * @description Exits are immediate — put the wait on the step before.
              * @default 0
-             * @constant
              */
-            delaySeconds: 0;
+            delaySeconds: number;
         } | {
             /** @constant */
             type: "unsubscribe";
@@ -1557,6 +1577,26 @@ export interface components {
                 message: string;
                 /** @description Present on send failures that were still logged (e.g. suppressed). */
                 message_id?: string;
+                /**
+                 * @description Echoes the `X-Request-Id` header. Present on every error. Quote it in a support request.
+                 * @example req_8fK2mQ
+                 */
+                request_id?: string;
+                /**
+                 * @description On a 403 refused at the rung: the tier this endpoint needs.
+                 * @enum {string}
+                 */
+                required_scope?: "read" | "write" | "admin";
+                /**
+                 * @description On a 403 refused at the grant: the key's rung was sufficient but it may not take the irreversible action. Not a tier — branch on this separately from `required_scope`.
+                 * @enum {string}
+                 */
+                required_grant?: "approve";
+                /**
+                 * @description On a 403: the tier the calling key actually holds.
+                 * @enum {string}
+                 */
+                key_scope?: "read" | "write" | "admin";
             };
         };
         SendResult: {
@@ -1710,7 +1750,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -1719,7 +1759,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -1888,6 +1946,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires the send grant (deliver mail to a real inbox) — this key does not have it.",
+                     *         "required_grant": "approve",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2114,6 +2190,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires the send grant (deliver mail to a real inbox) — this key does not have it.",
+                     *         "required_grant": "approve",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getMessage: {
@@ -2169,7 +2263,7 @@ export interface operations {
                     "application/json": components["schemas"]["MessageStatus"];
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2178,7 +2272,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2258,6 +2370,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Provide a valid API key."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2357,6 +2487,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires the send grant (deliver mail to a real inbox) — this key does not have it.",
+                     *         "required_grant": "approve",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No such message in this project. */
             404: {
                 headers: {
@@ -2408,7 +2556,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2417,7 +2565,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2533,6 +2699,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getContact: {
@@ -2556,7 +2740,7 @@ export interface operations {
                     "application/json": Record<string, never>;
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2565,7 +2749,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2612,7 +2814,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2621,7 +2823,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2672,7 +2892,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2681,7 +2901,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2744,7 +2982,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2753,7 +2991,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2800,7 +3056,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Missing key, or the key lacks `write` scope. */
+            /** @description Missing or invalid API key. */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -2809,7 +3065,25 @@ export interface operations {
                     /** @example {
                      *       "error": {
                      *         "code": "unauthorized",
-                     *         "message": "This endpoint requires a key with 'full' scope."
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2863,7 +3137,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     /**
-                     * @description Idempotency key for this event. A repeat is a no-op.
+                     * @description Idempotency key for this event. A repeat is a no-op for 30 days — the retention window on the event log. Past that the event row is pruned and its key becomes free again, so a replay of a genuinely old event is accepted as new. Automations are unaffected either way: enrolment is guarded by the run history, which is never pruned.
                      * @example ord_991
                      */
                     dedupe_key?: string;
@@ -2934,6 +3208,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listTemplates: {
@@ -2994,6 +3286,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3120,6 +3430,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getTemplate: {
@@ -3187,6 +3515,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3262,6 +3608,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3380,6 +3744,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No template matched. */
             404: {
                 headers: {
@@ -3479,6 +3861,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No template matched. */
             404: {
                 headers: {
@@ -3555,6 +3955,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3652,6 +4070,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No template matched. */
             404: {
                 headers: {
@@ -3723,6 +4159,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3825,6 +4279,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3934,6 +4406,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires the send grant (deliver mail to a real inbox) — this key does not have it.",
+                     *         "required_grant": "approve",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No template matched. */
             404: {
                 headers: {
@@ -4031,6 +4521,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No template matched. */
             404: {
                 headers: {
@@ -4113,6 +4621,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4258,6 +4784,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     updateAutomationStep: {
@@ -4296,7 +4840,7 @@ export interface operations {
                         };
                         /** @description Send steps: per-step subject override ({{vars}} ok); null clears. */
                         subject?: string | null;
-                        /** @description Send steps: per-step inbox preview text; null clears. */
+                        /** @description Send steps: per-step inbox preview text ({{vars}} ok); null clears. */
                         previewText?: string | null;
                         eventName?: string;
                         timeoutSeconds?: number;
@@ -4394,6 +4938,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4509,6 +5071,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -4591,6 +5171,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4701,6 +5299,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -4795,6 +5411,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4897,6 +5531,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -4948,6 +5600,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5071,6 +5741,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -5158,6 +5846,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5265,6 +5971,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5379,6 +6103,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -5472,6 +6214,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -5549,6 +6309,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation matched. */
             404: {
                 headers: {
@@ -5603,6 +6381,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5712,6 +6508,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No automation or step matched. */
             404: {
                 headers: {
@@ -5793,6 +6607,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5889,6 +6721,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5997,6 +6847,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     deleteDomain: {
@@ -6051,6 +6919,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6142,6 +7028,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No domain matched. */
             404: {
                 headers: {
@@ -6215,6 +7119,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6303,6 +7225,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     deleteSender: {
@@ -6354,6 +7294,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6450,6 +7408,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No sender matched. */
             404: {
                 headers: {
@@ -6532,6 +7508,102 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    getOnboardingSteps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Setup progress. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @description understand | strategy | content | live, or null once complete. */
+                        phase?: string | null;
+                        complete?: boolean;
+                        done_count?: number;
+                        total_count?: number;
+                        /** @description Address of the first unfinished step, e.g. `1.5`. */
+                        next?: string | null;
+                        /** @description Each: `address`, `key`, `title`, `phase`, `done`, `in_progress`, `detail[]`. */
+                        steps?: Record<string, never>[];
+                    };
+                };
+            };
+            /** @description The request body failed validation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "invalid_request",
+                     *         "message": "Body must be JSON."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Missing or invalid API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "unauthorized",
+                     *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `read`. Scopes are ranked, so any tier at or above `read` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires read access — this key has 'read' scope.",
+                     *         "required_scope": "read",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     registerWebhooks: {
@@ -6585,6 +7657,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     registerProviderWebhook: {
@@ -6633,6 +7723,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6718,6 +7826,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6836,6 +7962,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description An endpoint with this URL already exists in this project. */
             409: {
                 headers: {
@@ -6937,6 +8081,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
@@ -7002,6 +8164,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7123,6 +8303,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
@@ -7209,6 +8407,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
@@ -7275,6 +8491,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7389,6 +8623,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
@@ -7456,6 +8708,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7556,6 +8826,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createSegment: {
@@ -7636,6 +8924,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     deleteSegment: {
@@ -7672,6 +8978,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7761,6 +9085,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description No segment matched. */
             404: {
                 headers: {
@@ -7813,6 +9155,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7922,6 +9282,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listContactEvents: {
@@ -7988,6 +9366,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8085,6 +9481,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getMetrics: {
@@ -8122,12 +9536,17 @@ export interface operations {
                         /**
                          * @description Deliverability tripwires, phrased as actions.
                          * @example [
-                         *       "Complaint rate above 0.1% — stop and investigate before sending more."
+                         *       "Complaint rate above 0.08% — stop and investigate before sending more."
                          *     ]
                          */
                         warnings?: string[];
-                        /** @description True when the window hit the query cap — narrow it for exact numbers. */
+                        /** @description True when the window hit the query cap — narrow it for exact numbers. Always false when `source` is `daily_rollup`, which is pre-aggregated and has no cap to hit. */
                         truncated?: boolean;
+                        /**
+                         * @description Which engine answered. `raw` reads the message log directly and is exact to the second. `daily_rollup` is used once `since` reaches past the 30-day log retention window, past which the individual rows no longer exist — it is aggregated to whole UTC days, so `period` reports the snapped window rather than the one you asked for, and a warning says so. One engine always answers the whole range; the two are never mixed.
+                         * @enum {string}
+                         */
+                        source?: "raw" | "daily_rollup";
                     };
                 };
             };
@@ -8161,6 +9580,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getMetricsTrends: {
@@ -8189,6 +9626,8 @@ export interface operations {
                             day?: string;
                             sent?: number;
                             delivered?: number;
+                            /** @description Delivered to inbox providers that report spam complaints (Yahoo, Outlook/Hotmail and a few others — not Gmail or iCloud). Divide `complained` by THIS, not by `sent` or `delivered`: only these recipients can produce a complaint anyone hears about, so a broader denominator reads several times low. */
+                            fbl_delivered?: number;
                             opened?: number;
                             clicked?: number;
                             bounced?: number;
@@ -8224,6 +9663,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8282,6 +9739,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'write' scope (manage templates, contacts and automations) — this key has 'read' scope.",
+                     *         "required_scope": "write",
+                     *         "key_scope": "read",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8346,6 +9821,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     updateProjectSettings: {
@@ -8373,13 +9866,15 @@ export interface operations {
                      */
                     daily_send_cap?: number;
                     /**
-                     * @description Auto UTM tagging. When enabled, `params` are appended to every external link in outgoing emails (existing URL params always win). Values may embed {{automation}}, {{step}}, {{template}}, {{variant}}, {{source}} — resolved per send, slugified, and omitted when empty. Max 10 params, lowercase snake_case keys. `null` clears the config.
+                     * @description Auto UTM tagging, **on by default**. `params` are appended to every external link in outgoing emails (existing URL params always win). Values may embed {{automation}}, {{step}}, {{template}}, {{variant}}, {{source}} — resolved per send, slugified, and omitted when empty. Max 10 params, lowercase snake_case keys. Send `{ "enabled": false, "params": {} }` to switch tagging off; `null` clears your override and restores the defaults.
                      * @example {
                      *       "enabled": true,
                      *       "params": {
                      *         "utm_source": "email",
                      *         "utm_medium": "email",
-                     *         "utm_campaign": "{{automation}}"
+                     *         "utm_campaign": "{{automation}}",
+                     *         "utm_content": "{{template}}-{{step}}",
+                     *         "utm_term": "{{variant}}"
                      *       }
                      *     }
                      */
@@ -8445,6 +9940,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getBrand: {
@@ -8499,6 +10012,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     updateBrand: {
@@ -8515,9 +10046,7 @@ export interface operations {
                     brand: {
                         logo?: {
                             /** Format: uri */
-                            lightUrl?: string;
-                            /** Format: uri */
-                            darkUrl?: string;
+                            url?: string;
                             width?: number;
                         };
                         colors?: {
@@ -8587,6 +10116,24 @@ export interface operations {
                      *       "error": {
                      *         "code": "unauthorized",
                      *         "message": "Missing Authorization: Bearer <api key>."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "forbidden",
+                     *         "message": "This endpoint requires 'admin' scope (domains, senders and workspace settings) — this key has 'write' scope.",
+                     *         "required_scope": "admin",
+                     *         "key_scope": "write",
+                     *         "request_id": "req_8fK2mQ"
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
