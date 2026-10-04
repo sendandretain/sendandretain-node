@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The generated types are committed. This is what catches a hand-edit and
+      # a stale tree — the spec is the contract, and the types must be its
+      # faithful projection.
+      - name: Verify generated schema matches openapi.json
+        run: npm run verify
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Examples are typechecked against the built package, not executed: running
+      # them needs a real key, and a public repo's CI must not hold one. Compile
+      # -checking is what stops a rename silently invalidating every snippet.
+      - name: Typecheck examples
+        run: |
+          if [ -d examples ]; then npx tsc --noEmit -p examples/tsconfig.json; else
+            echo "no examples/ directory yet"
+          fi

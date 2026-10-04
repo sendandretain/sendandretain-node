@@ -1,0 +1,26 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Inline rather than a marketplace action: it is one regex, and a
+      # third-party action here would run on every PR from every contributor.
+      - name: Conventional title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          if ! printf '%s' "$TITLE" | grep -qE '^(feat|fix|chore|docs|refactor|test)(\([a-zA-Z0-9_-]+\))?!?: [a-z0-9].*'; then
+            echo "PR title must look like:  fix(client): stop dropping the retry header"
+            echo "Types: feat fix chore docs refactor test — and the summary starts lowercase."
+            echo "Got: $TITLE"
+            exit 1
+          fi

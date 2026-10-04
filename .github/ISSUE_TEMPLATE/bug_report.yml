@@ -1,0 +1,46 @@
+name: Bug report
+description: Something in this repo is wrong, or the API does not behave as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Do not paste API keys, customer data, or full response bodies from a
+        real account.** Redact before you post — an issue is public immediately.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you got, what you expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: |
+        The smallest request that shows the problem — a curl line is ideal.
+        Reproductions get fixed; descriptions get questions.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: request-id
+    attributes:
+      label: X-Request-Id
+      description: |
+        From the response headers, or `request_id` in an error body. This is
+        the only handle that ties what you saw to what we logged.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: SDK version, or the `info.version` digest from openapi.json.
+    validations:
+      required: false

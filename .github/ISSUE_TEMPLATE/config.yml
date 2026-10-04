@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://sendandretain.com/docs
+    about: Guides, the API reference, and the MCP tool reference.
+  - name: Account, billing or data questions
+    url: https://sendandretain.com
+    about: Use in-app support — an issue here is public, and those questions are not.
+  - name: Security vulnerability
+    url: https://github.com/sendandretain/sendandretain/blob/main/SECURITY.md
+    about: Report privately by email. Never in an issue.

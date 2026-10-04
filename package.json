@@ -1,0 +1,66 @@
+{
+  "name": "@sendandretain/sdk",
+  "version": "0.1.0",
+  "description": "Thin, fully-typed TypeScript/Node client for the Send & Retain email API. Types generated from the OpenAPI spec.",
+  "license": "MIT",
+  "author": "Trendly Studio",
+  "keywords": [
+    "email",
+    "transactional-email",
+    "lifecycle-email",
+    "api-client",
+    "sdk",
+    "typescript",
+    "openapi",
+    "sendandretain"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sendandretain/sendandretain-node.git"
+  },
+  "homepage": "https://github.com/sendandretain/sendandretain-node#readme",
+  "bugs": {
+    "url": "https://github.com/sendandretain/sendandretain-node/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "gen": "openapi-typescript openapi.json -o src/schema.d.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "verify": "node scripts/verify-schema-sync.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run gen && npm run build"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.14.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "openapi-typescript": "7.9.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

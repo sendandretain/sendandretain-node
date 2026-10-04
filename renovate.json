@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "//": "minimumReleaseAge is the actual supply-chain control here, and the reason this is Renovate rather than Dependabot: a package published and yanked within a day never reaches us. Dependabot has no equivalent.",
+  "minimumReleaseAge": "1 day",
+  "rangeStrategy": "pin",
+  "packageRules": [
+    {
+      "//": "The code generators are pinned exactly on purpose — their output is committed, so a patch bump rewrites a diff that has nothing to do with the API. Update them deliberately.",
+      "matchPackageNames": ["openapi-typescript", "openapi-python-client"],
+      "enabled": false
+    }
+  ]
+}

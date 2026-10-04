@@ -1,0 +1,37 @@
+name: Pinned dependencies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # A range means the build is not reproducible and a compromised patch
+      # release reaches consumers without a commit here. Renovate proposes the
+      # bumps; this makes accepting one a reviewed act.
+      - name: Every dependency is an exact version
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const bad = [];
+            for (const field of ["dependencies", "devDependencies", "peerDependencies"]) {
+              for (const [name, range] of Object.entries(pkg[field] ?? {})) {
+                if (field === "peerDependencies") continue;
+                if (!/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(range)) bad.push(field + ": " + name + "@" + range);
+              }
+            }
+            if (bad.length) {
+              console.error("Not pinned to an exact version:\n  " + bad.join("\n  "));
+              process.exit(1);
+            }
+            console.log("All dependencies pinned.");
+          '
