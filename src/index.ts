@@ -1,353 +1,539 @@
 import createOpenApiClient from "openapi-fetch";
+import { Webhook, WebhookVerificationError } from "standardwebhooks";
 
-import type { paths } from "./schema.js";
+import {
+  createTransport,
+  DEFAULT_BASE_URL,
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_TIMEOUT_MS,
+  idempotency,
+  paginate,
+  resolveApiKey,
+  resolveBaseUrl,
+  type ListPage,
+} from "./runtime.js";
+import type { components, paths } from "./schema.js";
 
-/**
- * Every payload and return type below is derived from `paths` in the generated
- * `schema.d.ts` (itself generated from the API's OpenAPI spec), so this client
- * has no hand-maintained request/response types and cannot drift from the API.
- */
-type Json<Body> = Body extends { content: { "application/json": infer T } } ? T : never;
+/** Kept in step with package.json by `__tests__/client.test.ts`. */
+export const VERSION = "0.2.0";
 
-type SendEmailBody = Json<NonNullable<paths["/api/v1/emails"]["post"]["requestBody"]>>;
-type ListEmailsQuery = NonNullable<paths["/api/v1/emails"]["get"]["parameters"]["query"]>;
-type RescheduleEmailBody = Json<NonNullable<paths["/api/v1/emails/{id}"]["patch"]["requestBody"]>>;
+// ── Types derived from the spec ────────────────────────────────────────────
+//
+// Every payload and return type is projected from `paths` in the generated
+// `schema.d.ts`, so this facade carries no hand-maintained request/response
+// types and cannot drift from the API.
 
-type UpsertContactBody = Json<NonNullable<paths["/api/v1/contacts"]["post"]["requestBody"]>>;
-type ListContactsQuery = NonNullable<paths["/api/v1/contacts"]["get"]["parameters"]["query"]>;
+type Op<P extends keyof paths, M extends keyof paths[P]> = paths[P][M];
+type Body<P extends keyof paths, M extends keyof paths[P]> =
+  Op<P, M> extends { requestBody?: { content: { "application/json": infer B } } } ? B : never;
+type Query<P extends keyof paths, M extends keyof paths[P]> =
+  Op<P, M> extends { parameters: { query?: infer Q } } ? NonNullable<Q> : never;
 
-type EmitEventBody = Json<NonNullable<paths["/api/v1/events"]["post"]["requestBody"]>>;
-
-type ListSuppressionsQuery = NonNullable<
-  paths["/api/v1/suppressions"]["get"]["parameters"]["query"]
->;
-type AddSuppressionBody = Json<NonNullable<paths["/api/v1/suppressions"]["post"]["requestBody"]>>;
-type RemoveSuppressionQuery = paths["/api/v1/suppressions"]["delete"]["parameters"]["query"];
-type ImportSuppressionsBody = Json<
-  NonNullable<paths["/api/v1/suppressions/import"]["post"]["requestBody"]>
->;
-type ImportContactsBody = Json<
-  NonNullable<paths["/api/v1/contacts/import"]["post"]["requestBody"]>
->;
-
-type CreateTemplateBody = Json<NonNullable<paths["/api/v1/templates"]["post"]["requestBody"]>>;
-type UpdateTemplateBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}"]["patch"]["requestBody"]>
->;
-type UpdateTemplateMetaBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}/meta"]["patch"]["requestBody"]>
->;
-type PublishVersionBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}/versions"]["post"]["requestBody"]>
->;
-type RenderTemplateBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}/render"]["post"]["requestBody"]>
->;
-type TestTemplateBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}/test"]["post"]["requestBody"]>
->;
-type AddTranslationBody = Json<
-  NonNullable<paths["/api/v1/templates/{slug}/translations"]["post"]["requestBody"]>
->;
-
-type CreateAutomationBody = Json<NonNullable<paths["/api/v1/automations"]["post"]["requestBody"]>>;
-type UpdateAutomationBody = Json<
-  NonNullable<paths["/api/v1/automations/{id}"]["patch"]["requestBody"]>
->;
-type SetStatusBody = Json<
-  NonNullable<paths["/api/v1/automations/{id}/status"]["post"]["requestBody"]>
->;
-type AddStepsBody = Json<NonNullable<paths["/api/v1/automations/steps"]["post"]["requestBody"]>>;
-type UpdateStepBody = Json<NonNullable<paths["/api/v1/automations/steps"]["put"]["requestBody"]>>;
-type RemoveStepBody = Json<
-  NonNullable<paths["/api/v1/automations/steps"]["delete"]["requestBody"]>
->;
-type MoveStepBody = Json<
-  NonNullable<paths["/api/v1/automations/steps/move"]["post"]["requestBody"]>
->;
-type SyncStepPropsBody = Json<
-  NonNullable<paths["/api/v1/automations/steps"]["patch"]["requestBody"]>
->;
-type SetAbTestBody = Json<
-  NonNullable<paths["/api/v1/automations/{id}/ab-test"]["post"]["requestBody"]>
->;
-type PromoteAbWinnerBody = Json<
-  NonNullable<paths["/api/v1/automations/{id}/ab-test"]["patch"]["requestBody"]>
->;
-type ListRunsQuery = NonNullable<
-  paths["/api/v1/automations/{id}/runs"]["get"]["parameters"]["query"]
->;
-
-type CreateDomainBody = Json<NonNullable<paths["/api/v1/domains"]["post"]["requestBody"]>>;
-type CreateSenderBody = Json<NonNullable<paths["/api/v1/senders"]["post"]["requestBody"]>>;
-type UpdateSenderBody = Json<NonNullable<paths["/api/v1/senders/{id}"]["patch"]["requestBody"]>>;
-
-type CreateSegmentBody = Json<NonNullable<paths["/api/v1/segments"]["post"]["requestBody"]>>;
-type UpdateSegmentBody = Json<NonNullable<paths["/api/v1/segments/{id}"]["patch"]["requestBody"]>>;
-
-type MetricsQuery = NonNullable<paths["/api/v1/metrics"]["get"]["parameters"]["query"]>;
-type TrendsQuery = NonNullable<paths["/api/v1/metrics/trends"]["get"]["parameters"]["query"]>;
-
-type UpdateSettingsBody = Json<NonNullable<paths["/api/v1/settings"]["patch"]["requestBody"]>>;
-type UpdateBrandBody = Json<NonNullable<paths["/api/v1/brand"]["patch"]["requestBody"]>>;
-
-/**
- * Default production origin — the `servers` entry of the committed
- * `openapi.json`. Overridable per client via `baseUrl` (or the
- * `SENDANDRETAIN_BASE_URL` env var in your own code) for previews and
- * self-hosted deployments.
- */
-export const DEFAULT_BASE_URL = "https://sendandretain.com";
+/** Any event we deliver to your webhook endpoint. Discriminate on `type`. */
+export type WebhookEvent = components["schemas"]["WebhookEvent"];
 
 export interface ClientOptions {
-  /** A per-project API key (`aem_...`). Server-side only — never ship it to the browser. */
-  apiKey: string;
-  /** API origin. Defaults to {@link DEFAULT_BASE_URL}. */
+  /** A per-project API key (`aem_…`). Defaults to `SENDANDRETAIN_API_KEY`. Server-side only. */
+  apiKey?: string;
+  /** API origin. Defaults to `SENDANDRETAIN_BASE_URL`, then {@link DEFAULT_BASE_URL}. */
   baseUrl?: string;
-  /** Inject a custom fetch (tests, edge runtimes). Defaults to the global `fetch`. */
+  /** Retries on 408/429/5xx and network errors, with backoff. Default 2; 0 disables. */
+  maxRetries?: number;
+  /** Per-attempt timeout in milliseconds. Default 60 000. */
+  timeout?: number;
+  /** Bring your own fetch (tests, proxies). Defaults to the global one. */
   fetch?: typeof fetch;
 }
 
-export interface SendOptions {
-  /** Unique per logical send (≤256 chars). A repeat returns the original result with `deduplicated: true`. */
+export interface RequestOptions {
+  /**
+   * Makes a create safe to retry (1–256 chars, kept 24h). The same key and body
+   * replays the first result; a different body is a `conflict` error. When you
+   * pass none, the SDK generates one per call so its own retries are safe.
+   */
   idempotencyKey?: string;
+  /** Extra headers for this request, e.g. your own `X-Request-Id`. */
+  headers?: Record<string, string>;
+  /** Cancel the request. */
+  signal?: AbortSignal;
+  /** Overall timeout for this call in milliseconds, retries included. */
+  timeout?: number;
+}
+
+/** What every failed call returns in `error`. */
+export interface ApiError {
+  /** Stable code to branch on: `not_found`, `rate_limited`, `suppressed`, … */
+  code: string;
+  /** Human-readable; may change. Do not branch on it. */
+  message: string;
+  /** HTTP status, or null when no response arrived (`network_error`, `aborted`). */
+  status: number | null;
+  /** Quote this in a support request. */
+  request_id: string | null;
+  [field: string]: unknown;
+}
+
+/** Every method resolves to this. Nothing throws for an API or network failure. */
+export type Result<T> =
+  | { data: T; error: null; headers: Headers }
+  | { data: null; error: ApiError; headers: Headers | null };
+
+type FetchResult = { data?: unknown; error?: unknown; response: Response };
+type DataOf<P> = NonNullable<Awaited<P> extends { data?: infer D } ? D : never>;
+
+function toApiError(raw: unknown, response: Response): ApiError {
+  const envelope = (raw as { error?: Record<string, unknown> } | undefined)?.error;
+  const requestId = response.headers.get("X-Request-Id");
+  return {
+    ...(envelope ?? {}),
+    code: typeof envelope?.code === "string" ? envelope.code : `http_${response.status}`,
+    message:
+      typeof envelope?.message === "string"
+        ? envelope.message
+        : `${response.status} ${response.statusText}`.trim(),
+    status: response.status,
+    request_id: (envelope?.request_id as string | undefined) ?? requestId,
+  };
+}
+
+async function run<P extends Promise<FetchResult>>(call: P): Promise<Result<DataOf<P>>> {
+  try {
+    const { data, error, response } = await call;
+    if (error !== undefined || !response.ok) {
+      return { data: null, error: toApiError(error, response), headers: response.headers };
+    }
+    return { data: (data ?? null) as DataOf<P>, error: null, headers: response.headers };
+  } catch (thrown) {
+    const aborted = thrown instanceof Error && (thrown.name === "AbortError" || thrown.name === "TimeoutError");
+    return {
+      data: null,
+      error: {
+        code: aborted ? "aborted" : "network_error",
+        message: thrown instanceof Error ? thrown.message : String(thrown),
+        status: null,
+        request_id: null,
+      },
+      headers: null,
+    };
+  }
+}
+
+function init(options?: RequestOptions) {
+  const headers: Record<string, string> = { ...options?.headers, ...idempotency(options)?.header };
+  const signals = [
+    options?.signal,
+    options?.timeout === undefined ? undefined : AbortSignal.timeout(options.timeout),
+  ].filter((s): s is AbortSignal => s !== undefined);
+  return {
+    headers,
+    ...(signals.length === 0 ? {} : { signal: signals.length === 1 ? signals[0] : AbortSignal.any(signals) }),
+  };
+}
+
+type Page = ListPage<unknown>;
+type Item<D> = D extends { data: Array<infer I> } ? I : never;
+
+/** Turn one page into an async iterator over every row of every page. */
+function walk<D extends Page>(fetchPage: (cursor: string | undefined) => Promise<Result<D>>) {
+  return paginate<Item<D>>(async (cursor) => {
+    const page = await fetchPage(cursor);
+    return page.error ? { error: page.error } : { data: page.data as unknown as ListPage<Item<D>> };
+  });
+}
+
+// ── Webhooks ───────────────────────────────────────────────────────────────
+
+export { WebhookVerificationError };
+
+export interface VerifyWebhookInput {
+  /** The RAW request body — before any JSON parsing. */
+  payload: string | Uint8Array;
+  /** The request headers: a `Headers` object or a plain record (Express, Node). */
+  headers: Headers | Record<string, string | string[] | undefined>;
+  /** The endpoint's `whsec_…` signing secret. */
+  secret: string;
 }
 
 /**
- * Create a typed client for the Send & Retain API.
- *
- * ```ts
- * const emails = createClient({ apiKey: process.env.SENDANDRETAIN_API_KEY! });
- * const { data, error } = await emails.emails.send(
- *   { to: "jane@acme.com", template: "welcome", props: { firstName: "Jane" } },
- *   { idempotencyKey: "welcome-jane-1" },
- * );
- * ```
- *
- * Every method returns openapi-fetch's `{ data, error, response }` union: on a
- * non-2xx response `error` holds the typed `{ error: { code, message } }`
- * envelope and `data` is undefined.
+ * Verify a delivery's Standard Webhooks signature and return the typed event.
+ * Throws {@link WebhookVerificationError} on a bad signature or a timestamp more
+ * than five minutes off — answer those with a 400 and do nothing else.
  */
-export function createClient(opts: ClientOptions) {
+export function verifyWebhook({ payload, headers, secret }: VerifyWebhookInput): WebhookEvent {
+  const flat: Record<string, string> = {};
+  if (headers instanceof Headers) {
+    headers.forEach((value, key) => (flat[key.toLowerCase()] = value));
+  } else {
+    for (const [key, value] of Object.entries(headers)) {
+      if (value !== undefined) flat[key.toLowerCase()] = Array.isArray(value) ? value.join(",") : value;
+    }
+  }
+  const body = typeof payload === "string" ? payload : new TextDecoder().decode(payload);
+  return new Webhook(secret).verify(body, flat) as WebhookEvent;
+}
+
+// ── The client ─────────────────────────────────────────────────────────────
+
+function resources(options: ClientOptions) {
   const http = createOpenApiClient<paths>({
-    baseUrl: opts.baseUrl ?? DEFAULT_BASE_URL,
-    fetch: opts.fetch,
-    headers: { Authorization: `Bearer ${opts.apiKey}` },
+    baseUrl: resolveBaseUrl(options.baseUrl),
+    fetch: createTransport({
+      apiKey: resolveApiKey(options.apiKey),
+      version: VERSION,
+      maxRetries: options.maxRetries ?? DEFAULT_MAX_RETRIES,
+      timeoutMs: options.timeout ?? DEFAULT_TIMEOUT_MS,
+      fetch: options.fetch,
+    }),
   });
 
+  const emailsList = (query?: Query<"/api/v1/emails", "get">, o?: RequestOptions) =>
+    run(http.GET("/api/v1/emails", { params: { query }, ...init(o) }));
+  const contactsList = (query?: Query<"/api/v1/contacts", "get">, o?: RequestOptions) =>
+    run(http.GET("/api/v1/contacts", { params: { query }, ...init(o) }));
+  const suppressionsList = (query?: Query<"/api/v1/suppressions", "get">, o?: RequestOptions) =>
+    run(http.GET("/api/v1/suppressions", { params: { query }, ...init(o) }));
+  const contactEvents = (
+    id: string,
+    query?: Query<"/api/v1/contacts/{id}/events", "get">,
+    o?: RequestOptions
+  ) => run(http.GET("/api/v1/contacts/{id}/events", { params: { path: { id }, query }, ...init(o) }));
+  const automationRuns = (
+    id: string,
+    query?: Query<"/api/v1/automations/{id}/runs", "get">,
+    o?: RequestOptions
+  ) => run(http.GET("/api/v1/automations/{id}/runs", { params: { path: { id }, query }, ...init(o) }));
+  const webhookDeliveries = (
+    id: string,
+    query?: Query<"/api/v1/webhooks/{id}/deliveries", "get">,
+    o?: RequestOptions
+  ) =>
+    run(http.GET("/api/v1/webhooks/{id}/deliveries", { params: { path: { id }, query }, ...init(o) }));
+
   return {
-    /** The underlying openapi-fetch client, for endpoints not covered by the facade. */
+    /** The underlying openapi-fetch client — every path, fully typed, no facade. */
     http,
 
     emails: {
-      /** Send a transactional email from a published template. Needs a `write`-scope key **and** the send grant. */
-      send: (body: SendEmailBody, options?: SendOptions) =>
-        http.POST("/api/v1/emails", {
-          body,
-          params: options?.idempotencyKey
-            ? { header: { "Idempotency-Key": options.idempotencyKey } }
-            : undefined,
-        }),
-      /** Look up a message's status + event timeline. Needs a `write`-scope key. */
-      get: (id: string) => http.GET("/api/v1/emails/{id}", { params: { path: { id } } }),
-      /** List messages newest-first. Needs a `write`-scope key. */
-      list: (query?: ListEmailsQuery) => http.GET("/api/v1/emails", { params: { query } }),
-      /** Reschedule a scheduled send. Needs a `write`-scope key **and** the send grant. */
-      reschedule: (id: string, body: RescheduleEmailBody) =>
-        http.PATCH("/api/v1/emails/{id}", { params: { path: { id } }, body }),
-      /** Cancel a scheduled send. */
-      cancel: (id: string) => http.DELETE("/api/v1/emails/{id}", { params: { path: { id } } }),
+      /**
+       * Queue one email from a published template. Answers `202` with the
+       * message id; delivery outcomes arrive by webhook. Needs `write` **and**
+       * the send grant.
+       */
+      send: (body: Body<"/api/v1/emails", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/emails", { body, ...init(o) })),
+      /** A message's status and event timeline. */
+      get: (id: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/emails/{id}", { params: { path: { id } }, ...init(o) })),
+      /** Sent messages, newest first. `.iterate()` walks every page. */
+      list: Object.assign(emailsList, {
+        iterate: (query?: Omit<Query<"/api/v1/emails", "get">, "cursor" | "before">, o?: RequestOptions) =>
+          walk((cursor) => emailsList({ ...query, cursor }, o)),
+      }),
+      /** Move a still-scheduled send. Needs the send grant. */
+      reschedule: (id: string, body: Body<"/api/v1/emails/{id}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/emails/{id}", { params: { path: { id } }, body, ...init(o) })),
+      /** Cancel a still-scheduled send. */
+      cancel: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/emails/{id}", { params: { path: { id } }, ...init(o) })),
+      batch: {
+        /**
+         * Up to 100 distinct emails in one call. Entries succeed and fail
+         * independently — read `data[i]`, not the status code.
+         */
+        send: (body: Body<"/api/v1/emails/batch", "post">, o?: RequestOptions) =>
+          run(http.POST("/api/v1/emails/batch", { body, ...init(o) })),
+      },
     },
 
     contacts: {
-      /** Create or update a contact (attributes shallow-merge). Needs a `write`-scope key. */
-      upsert: (body: UpsertContactBody) => http.POST("/api/v1/contacts", { body }),
-      /** List contacts. Needs a `write`-scope key. */
-      list: (query?: ListContactsQuery) => http.GET("/api/v1/contacts", { params: { query } }),
-      /** Get one contact + its subscription state. Needs a `write`-scope key. */
-      get: (id: string) => http.GET("/api/v1/contacts/{id}", { params: { path: { id } } }),
-      /** Hard-delete a contact. Needs a `write`-scope key. */
-      delete: (id: string) => http.DELETE("/api/v1/contacts/{id}", { params: { path: { id } } }),
+      /** Create or update a contact by email; attributes shallow-merge. */
+      upsert: (body: Body<"/api/v1/contacts", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/contacts", { body, ...init(o) })),
+      list: Object.assign(contactsList, {
+        iterate: (query?: Omit<Query<"/api/v1/contacts", "get">, "cursor" | "before">, o?: RequestOptions) =>
+          walk((cursor) => contactsList({ ...query, cursor }, o)),
+      }),
+      get: (id: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/contacts/{id}", { params: { path: { id } }, ...init(o) })),
+      /** Hard-delete. Does not suppress — add a suppression if they asked not to be emailed. */
+      delete: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/contacts/{id}", { params: { path: { id } }, ...init(o) })),
       /** Bulk upsert, up to 1000 per call. Partial success — check `failed`. */
-      import: (body: ImportContactsBody) => http.POST("/api/v1/contacts/import", { body }),
-      /** Event timeline — the first place to look when an automation didn't fire. */
-      events: (id: string) =>
-        http.GET("/api/v1/contacts/{id}/events", { params: { path: { id } } }),
+      import: (body: Body<"/api/v1/contacts/import", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/contacts/import", { body, ...init(o) })),
+      /** A contact's event timeline — the first place to look when an automation did not fire. */
+      events: Object.assign(contactEvents, {
+        iterate: (id: string, query?: Omit<Query<"/api/v1/contacts/{id}/events", "get">, "cursor">, o?: RequestOptions) =>
+          walk((cursor) => contactEvents(id, { ...query, cursor }, o)),
+      }),
     },
 
     events: {
-      /** Emit a contact event (enrolls matching automations). Needs a `write`-scope key. */
-      emit: (body: EmitEventBody) => http.POST("/api/v1/events", { body }),
+      /** Record a contact event; matching automations enrol in the background. */
+      emit: (body: Body<"/api/v1/events", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/events", { body, ...init(o) })),
     },
 
     suppressions: {
-      /** List suppressions. Needs a `write`-scope key. */
-      list: (query?: ListSuppressionsQuery) =>
-        http.GET("/api/v1/suppressions", { params: { query } }),
-      /** Add a manual suppression. Needs a `write`-scope key. */
-      add: (body: AddSuppressionBody) => http.POST("/api/v1/suppressions", { body }),
-      /** Remove a suppression (complaint suppressions are permanent). Needs a `write`-scope key. */
-      remove: (query: RemoveSuppressionQuery) =>
-        http.DELETE("/api/v1/suppressions", { params: { query } }),
-      /** Bulk-import existing unsubscribes, ideally before your first send. */
-      import: (body: ImportSuppressionsBody) => http.POST("/api/v1/suppressions/import", { body }),
+      list: Object.assign(suppressionsList, {
+        iterate: (query?: Omit<Query<"/api/v1/suppressions", "get">, "cursor">, o?: RequestOptions) =>
+          walk((cursor) => suppressionsList({ ...query, cursor }, o)),
+      }),
+      add: (body: Body<"/api/v1/suppressions", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/suppressions", { body, ...init(o) })),
+      /** Complaint suppressions are permanent and refuse removal. */
+      remove: (email: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/suppressions", { params: { query: { email } }, ...init(o) })),
+      /** Bulk-import existing unsubscribes — ideally before the first send. */
+      import: (body: Body<"/api/v1/suppressions/import", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/suppressions/import", { body, ...init(o) })),
     },
 
     /**
-     * Template authoring. The loop is create → render → test → publish:
-     * drafts can't send, and published versions are immutable, so every edit
-     * produces a new draft you publish deliberately. All need `write` scope;
-     * `test` delivers to a real inbox, so it also needs the send grant.
+     * Template authoring: create → render → test → publish. Drafts cannot send
+     * and published versions are immutable, so every edit is a new draft.
      */
     templates: {
-      create: (body: CreateTemplateBody) => http.POST("/api/v1/templates", { body }),
-      list: () => http.GET("/api/v1/templates"),
-      get: (slug: string, version?: number) =>
-        http.GET("/api/v1/templates/{slug}", {
-          params: { path: { slug }, query: version === undefined ? undefined : { version } },
-        }),
-      /** Creates a NEW draft version — never mutates what's currently sending. */
-      update: (slug: string, body: UpdateTemplateBody) =>
-        http.PATCH("/api/v1/templates/{slug}", { params: { path: { slug } }, body }),
-      archive: (slug: string) =>
-        http.DELETE("/api/v1/templates/{slug}", { params: { path: { slug } } }),
-      /** Subject / preview text / sender, auto-published if the template is live. */
-      updateMeta: (slug: string, body: UpdateTemplateMetaBody) =>
-        http.PATCH("/api/v1/templates/{slug}/meta", { params: { path: { slug } }, body }),
-      listVersions: (slug: string) =>
-        http.GET("/api/v1/templates/{slug}/versions", { params: { path: { slug } } }),
-      publish: (slug: string, body?: PublishVersionBody) =>
-        http.POST("/api/v1/templates/{slug}/versions", {
-          params: { path: { slug } },
-          body: body ?? {},
-        }),
-      /** Compile + render with no side effects. Errors carry the diagnostics. */
-      render: (slug: string, body?: RenderTemplateBody) =>
-        http.POST("/api/v1/templates/{slug}/render", {
-          params: { path: { slug } },
-          body: body ?? {},
-        }),
-      /** Send a `[TEST]` copy — works on unpublished drafts. */
-      test: (slug: string, body: TestTemplateBody) =>
-        http.POST("/api/v1/templates/{slug}/test", { params: { path: { slug } }, body }),
-      addTranslation: (slug: string, body: AddTranslationBody) =>
-        http.POST("/api/v1/templates/{slug}/translations", { params: { path: { slug } }, body }),
+      create: (body: Body<"/api/v1/templates", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/templates", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/templates", { ...init(o) })),
+      get: (slug: string, version?: number, o?: RequestOptions) =>
+        run(
+          http.GET("/api/v1/templates/{slug}", {
+            params: { path: { slug }, query: version === undefined ? undefined : { version } },
+            ...init(o),
+          })
+        ),
+      /** A NEW draft version — never changes what is sending now. */
+      update: (slug: string, body: Body<"/api/v1/templates/{slug}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/templates/{slug}", { params: { path: { slug } }, body, ...init(o) })),
+      archive: (slug: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/templates/{slug}", { params: { path: { slug } }, ...init(o) })),
+      /** Subject, preview text, sender — auto-published when the template is live. */
+      updateMeta: (slug: string, body: Body<"/api/v1/templates/{slug}/meta", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/templates/{slug}/meta", { params: { path: { slug } }, body, ...init(o) })),
+      listVersions: (slug: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/templates/{slug}/versions", { params: { path: { slug } }, ...init(o) })),
+      publish: (slug: string, body: Body<"/api/v1/templates/{slug}/versions", "post"> = {}, o?: RequestOptions) =>
+        run(http.POST("/api/v1/templates/{slug}/versions", { params: { path: { slug } }, body, ...init(o) })),
+      /** Take a live template out of service; sends refuse until you publish again. */
+      unpublish: (slug: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/templates/{slug}/versions", { params: { path: { slug } }, ...init(o) })),
+      /** Compile and render with no side effects. Errors carry the diagnostics. */
+      render: (slug: string, body: Body<"/api/v1/templates/{slug}/render", "post"> = {}, o?: RequestOptions) =>
+        run(http.POST("/api/v1/templates/{slug}/render", { params: { path: { slug } }, body, ...init(o) })),
+      /** Send a `[TEST]` copy — works on drafts. Needs the send grant. */
+      test: (slug: string, body: Body<"/api/v1/templates/{slug}/test", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/templates/{slug}/test", { params: { path: { slug } }, body, ...init(o) })),
+      addTranslation: (
+        slug: string,
+        body: Body<"/api/v1/templates/{slug}/translations", "post">,
+        o?: RequestOptions
+      ) =>
+        run(http.POST("/api/v1/templates/{slug}/translations", { params: { path: { slug } }, body, ...init(o) })),
     },
 
     /**
-     * Event-triggered sequences. `id` accepts an automation id or its exact
-     * name. Automations are always created paused — `setStatus` is the only
-     * call that starts real sending, and it requires `confirm: true`.
+     * Event-triggered automations. `id` is an automation id or its exact name.
+     * Always created paused — `setStatus` is the only call that starts sending.
      */
     automations: {
-      create: (body: CreateAutomationBody) => http.POST("/api/v1/automations", { body }),
-      list: () => http.GET("/api/v1/automations"),
-      get: (id: string) => http.GET("/api/v1/automations/{id}", { params: { path: { id } } }),
-      update: (id: string, body: UpdateAutomationBody) =>
-        http.PATCH("/api/v1/automations/{id}", { params: { path: { id } }, body }),
-      archive: (id: string) =>
-        http.DELETE("/api/v1/automations/{id}", { params: { path: { id } } }),
+      create: (body: Body<"/api/v1/automations", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/automations", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/automations", { ...init(o) })),
+      get: (id: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/automations/{id}", { params: { path: { id } }, ...init(o) })),
+      update: (id: string, body: Body<"/api/v1/automations/{id}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/automations/{id}", { params: { path: { id } }, body, ...init(o) })),
+      archive: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/automations/{id}", { params: { path: { id } }, ...init(o) })),
       /** Activating requires `{ status: "active", confirm: true }`. */
-      setStatus: (id: string, body: SetStatusBody) =>
-        http.POST("/api/v1/automations/{id}/status", { params: { path: { id } }, body }),
-      duplicate: (id: string) =>
-        http.POST("/api/v1/automations/{id}/duplicate", { params: { path: { id } } }),
-      /** Read-only dry run of everything activation would validate. */
-      preflight: (id: string) =>
-        http.GET("/api/v1/automations/{id}/preflight", { params: { path: { id } } }),
-      listRuns: (id: string, query?: ListRunsQuery) =>
-        http.GET("/api/v1/automations/{id}/runs", { params: { path: { id }, query } }),
-      metrics: (id: string, since?: string) =>
-        http.GET("/api/v1/automations/{id}/metrics", {
-          params: { path: { id }, query: since === undefined ? undefined : { since } },
-        }),
-      setAbTest: (id: string, body: SetAbTestBody) =>
-        http.POST("/api/v1/automations/{id}/ab-test", { params: { path: { id } }, body }),
-      promoteAbWinner: (id: string, body: PromoteAbWinnerBody) =>
-        http.PATCH("/api/v1/automations/{id}/ab-test", { params: { path: { id } }, body }),
-
-      /** Step editing. Steps are addressed by their `position`. */
+      setStatus: (id: string, body: Body<"/api/v1/automations/{id}/status", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/automations/{id}/status", { params: { path: { id } }, body, ...init(o) })),
+      duplicate: (id: string, o?: RequestOptions) =>
+        run(http.POST("/api/v1/automations/{id}/duplicate", { params: { path: { id } }, ...init(o) })),
+      /** Enrol contacts whose trigger event arrived before the automation went live. */
+      backfill: (id: string, body: Body<"/api/v1/automations/{id}/backfill", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/automations/{id}/backfill", { params: { path: { id } }, body, ...init(o) })),
+      /** Dry run of everything activation validates. */
+      preflight: (id: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/automations/{id}/preflight", { params: { path: { id } }, ...init(o) })),
+      runs: Object.assign(automationRuns, {
+        iterate: (id: string, query?: Omit<Query<"/api/v1/automations/{id}/runs", "get">, "cursor">, o?: RequestOptions) =>
+          walk((cursor) => automationRuns(id, { ...query, cursor }, o)),
+      }),
+      metrics: (id: string, query?: Query<"/api/v1/automations/{id}/metrics", "get">, o?: RequestOptions) =>
+        run(http.GET("/api/v1/automations/{id}/metrics", { params: { path: { id }, query }, ...init(o) })),
+      setAbTest: (id: string, body: Body<"/api/v1/automations/{id}/ab-test", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/automations/{id}/ab-test", { params: { path: { id } }, body, ...init(o) })),
+      promoteAbWinner: (id: string, body: Body<"/api/v1/automations/{id}/ab-test", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/automations/{id}/ab-test", { params: { path: { id } }, body, ...init(o) })),
+      /** Step editing. Appending is safe on a live automation; inserting is not. */
       steps: {
-        /** Appending is safe on a live automation; inserting is not. */
-        add: (body: AddStepsBody) => http.POST("/api/v1/automations/steps", { body }),
-        update: (body: UpdateStepBody) => http.PUT("/api/v1/automations/steps", { body }),
-        remove: (body: RemoveStepBody) => http.DELETE("/api/v1/automations/steps", { body }),
-        move: (body: MoveStepBody) => http.POST("/api/v1/automations/steps/move", { body }),
-        /** Bulk-refresh props_overrides across send steps, by position. */
-        syncProps: (body: SyncStepPropsBody) => http.PATCH("/api/v1/automations/steps", { body }),
+        add: (body: Body<"/api/v1/automations/steps", "post">, o?: RequestOptions) =>
+          run(http.POST("/api/v1/automations/steps", { body, ...init(o) })),
+        update: (body: Body<"/api/v1/automations/steps", "put">, o?: RequestOptions) =>
+          run(http.PUT("/api/v1/automations/steps", { body, ...init(o) })),
+        remove: (body: Body<"/api/v1/automations/steps", "delete">, o?: RequestOptions) =>
+          run(http.DELETE("/api/v1/automations/steps", { body, ...init(o) })),
+        move: (body: Body<"/api/v1/automations/steps/move", "post">, o?: RequestOptions) =>
+          run(http.POST("/api/v1/automations/steps/move", { body, ...init(o) })),
+        /** Bulk-refresh props overrides across send steps. */
+        syncProps: (body: Body<"/api/v1/automations/steps", "patch">, o?: RequestOptions) =>
+          run(http.PATCH("/api/v1/automations/steps", { body, ...init(o) })),
       },
     },
 
-    /**
-     * Segments. Need `write` scope.
-     *
-     * There is deliberately no `topics` here. An earlier draft of this client
-     * exposed `list`/`upsert`/`delete` against `/api/v1/topics`, which the API
-     * does not implement — those paths appear nowhere in `openapi.json`, so
-     * every call would have 404'd. Restore this block in the same change that
-     * adds the routes to the spec, not before.
-     */
-    audience: {
-      segments: {
-        create: (body: CreateSegmentBody) => http.POST("/api/v1/segments", { body }),
-        list: () => http.GET("/api/v1/segments"),
-        update: (id: string, body: UpdateSegmentBody) =>
-          http.PATCH("/api/v1/segments/{id}", { params: { path: { id } }, body }),
-        delete: (id: string) => http.DELETE("/api/v1/segments/{id}", { params: { path: { id } } }),
-        refreshCount: (id: string) =>
-          http.POST("/api/v1/segments/{id}/refresh", { params: { path: { id } } }),
-      },
+    segments: {
+      create: (body: Body<"/api/v1/segments", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/segments", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/segments", { ...init(o) })),
+      update: (id: string, body: Body<"/api/v1/segments/{id}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/segments/{id}", { params: { path: { id } }, body, ...init(o) })),
+      delete: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/segments/{id}", { params: { path: { id } }, ...init(o) })),
+      refreshCount: (id: string, o?: RequestOptions) =>
+        run(http.POST("/api/v1/segments/{id}/refresh", { params: { path: { id } }, ...init(o) })),
     },
 
-    /**
-     * Sending infrastructure. Needs an `admin`-scope key (except `onboarding`,
-     * which is `read`). Provider API keys can NOT be set here — they only enter
-     * through the dashboard.
-     */
-    setup: {
-      /** How far through setup this company is — the next step to take. `read` scope. */
-      onboarding: () => http.GET("/api/v1/setup/onboarding"),
-      /** One call for "can this project send right now?". */
-      connection: () => http.GET("/api/v1/connection"),
-      /** Idempotent; safe to call on every deploy. */
-      registerWebhooks: () => http.POST("/api/v1/webhooks/register"),
-      domains: {
-        /** Returns the DNS records a human must publish. */
-        create: (body: CreateDomainBody) => http.POST("/api/v1/domains", { body }),
-        list: () => http.GET("/api/v1/domains"),
-        /** Poll after publishing DNS — `verified: false` just means not yet. */
-        verify: (domain: string) =>
-          http.POST("/api/v1/domains/{domain}/verify", { params: { path: { domain } } }),
-      },
-      senders: {
-        create: (body: CreateSenderBody) => http.POST("/api/v1/senders", { body }),
-        list: () => http.GET("/api/v1/senders"),
-        update: (id: string, body: UpdateSenderBody) =>
-          http.PATCH("/api/v1/senders/{id}", { params: { path: { id } }, body }),
-      },
+    /** Sending domains. `admin` scope. */
+    domains: {
+      /** Returns the DNS records to publish. */
+      create: (body: Body<"/api/v1/domains", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/domains", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/domains", { ...init(o) })),
+      /** Poll after publishing DNS — `verified: false` just means not yet. */
+      verify: (domain: string, o?: RequestOptions) =>
+        run(http.POST("/api/v1/domains/{domain}/verify", { params: { path: { domain } }, ...init(o) })),
+      delete: (domain: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/domains/{domain}", { params: { path: { domain } }, ...init(o) })),
     },
 
-    /** Delivery funnel, daily trends, and worker-queue health. `write` scope. */
+    /** Sender identities. `admin` scope. */
+    senders: {
+      create: (body: Body<"/api/v1/senders", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/senders", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/senders", { ...init(o) })),
+      update: (id: string, body: Body<"/api/v1/senders/{id}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/senders/{id}", { params: { path: { id } }, body, ...init(o) })),
+      delete: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/senders/{id}", { params: { path: { id } }, ...init(o) })),
+    },
+
+    /** Endpoints that receive email events, and their delivery history. `admin` scope. */
+    webhooks: {
+      /** The response carries the signing `secret` exactly once — store it. */
+      create: (body: Body<"/api/v1/webhooks", "post">, o?: RequestOptions) =>
+        run(http.POST("/api/v1/webhooks", { body, ...init(o) })),
+      list: (o?: RequestOptions) => run(http.GET("/api/v1/webhooks", { ...init(o) })),
+      get: (id: string, o?: RequestOptions) =>
+        run(http.GET("/api/v1/webhooks/{id}", { params: { path: { id } }, ...init(o) })),
+      update: (id: string, body: Body<"/api/v1/webhooks/{id}", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/webhooks/{id}", { params: { path: { id } }, body, ...init(o) })),
+      delete: (id: string, o?: RequestOptions) =>
+        run(http.DELETE("/api/v1/webhooks/{id}", { params: { path: { id } }, ...init(o) })),
+      /** Mint a new secret; the old one keeps verifying for the grace window. */
+      rotateSecret: (
+        id: string,
+        body: Body<"/api/v1/webhooks/{id}/rotate-secret", "post"> = {},
+        o?: RequestOptions
+      ) => run(http.POST("/api/v1/webhooks/{id}/rotate-secret", { params: { path: { id } }, body, ...init(o) })),
+      /** Queue a signed `webhook.test` delivery. */
+      test: (id: string, o?: RequestOptions) =>
+        run(http.POST("/api/v1/webhooks/{id}/test", { params: { path: { id } }, ...init(o) })),
+      deliveries: {
+        list: Object.assign(webhookDeliveries, {
+          iterate: (
+            id: string,
+            query?: Omit<Query<"/api/v1/webhooks/{id}/deliveries", "get">, "cursor" | "before">,
+            o?: RequestOptions
+          ) => walk((cursor) => webhookDeliveries(id, { ...query, cursor }, o)),
+        }),
+        /** Re-send a past delivery with the same payload and `webhook-id`. */
+        replay: (id: string, deliveryId: string, o?: RequestOptions) =>
+          run(
+            http.POST("/api/v1/webhooks/{id}/deliveries/{deliveryId}/replay", {
+              params: { path: { id, deliveryId } },
+              ...init(o),
+            })
+          ),
+      },
+      /** Verify a delivery's signature and return the typed event. Throws on a bad one. */
+      verify: verifyWebhook,
+    },
+
+    /** Delivery funnel, daily trends and queue health. */
     metrics: {
-      /** Exact, windowed, per-template. Defaults to the last 7 days. */
-      get: (query?: MetricsQuery) => http.GET("/api/v1/metrics", { params: { query } }),
-      /** Fast, coarse daily series from the rollup — for charting. */
-      trends: (query?: TrendsQuery) => http.GET("/api/v1/metrics/trends", { params: { query } }),
-      /** Rising backlog here means mail is late. Worth alerting on. */
-      queueHealth: () => http.GET("/api/v1/queue/health"),
+      get: (query?: Query<"/api/v1/metrics", "get">, o?: RequestOptions) =>
+        run(http.GET("/api/v1/metrics", { params: { query }, ...init(o) })),
+      trends: (query?: Query<"/api/v1/metrics/trends", "get">, o?: RequestOptions) =>
+        run(http.GET("/api/v1/metrics/trends", { params: { query }, ...init(o) })),
+      /** A rising backlog means mail is late. Worth alerting on. */
+      queueHealth: (o?: RequestOptions) => run(http.GET("/api/v1/queue/health", { ...init(o) })),
     },
 
-    /** Project guardrails and brand kit. Need an `admin`-scope key. */
+    /** Project guardrails and the brand kit. `admin` scope. */
     settings: {
-      get: () => http.GET("/api/v1/settings"),
+      get: (o?: RequestOptions) => run(http.GET("/api/v1/settings", { ...init(o) })),
       /** Pausing requires `{ sends_paused: true, confirm: true }`. */
-      update: (body: UpdateSettingsBody) => http.PATCH("/api/v1/settings", { body }),
-      getBrand: () => http.GET("/api/v1/brand"),
-      updateBrand: (body: UpdateBrandBody) => http.PATCH("/api/v1/brand", { body }),
+      update: (body: Body<"/api/v1/settings", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/settings", { body, ...init(o) })),
+      getBrand: (o?: RequestOptions) => run(http.GET("/api/v1/brand", { ...init(o) })),
+      updateBrand: (body: Body<"/api/v1/brand", "patch">, o?: RequestOptions) =>
+        run(http.PATCH("/api/v1/brand", { body, ...init(o) })),
+    },
+
+    /** Onboarding state and the provider connection. */
+    setup: {
+      /** How far through setup this project is. The one `read`-scope call. */
+      onboarding: (o?: RequestOptions) => run(http.GET("/api/v1/setup/onboarding", { ...init(o) })),
+      /** "Can this project send right now?" in one call. */
+      connection: (o?: RequestOptions) => run(http.GET("/api/v1/connection", { ...init(o) })),
+      /** Point the delivery provider's event webhook at us. Idempotent. */
+      registerProviderWebhook: (o?: RequestOptions) =>
+        run(http.POST("/api/v1/setup/provider-webhook", { ...init(o) })),
+      /** @deprecated Use {@link registerProviderWebhook}. Sunsets 2027-02-10. */
+      registerWebhooks: (o?: RequestOptions) => run(http.POST("/api/v1/webhooks/register", { ...init(o) })),
     },
   };
 }
 
-export type EmailsClient = ReturnType<typeof createClient>;
+type Resources = ReturnType<typeof resources>;
 
-export type { paths, components, operations } from "./schema.js";
+// Declaration merging: the instance carries every resource, typed.
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface SendAndRetain extends Resources {}
+
+/**
+ * The Send & Retain client.
+ *
+ * ```ts
+ * const sendandretain = new SendAndRetain(); // reads SENDANDRETAIN_API_KEY
+ * const { data, error } = await sendandretain.emails.send({
+ *   to: "jane@acme.com",
+ *   template: "welcome",
+ * });
+ * if (error) console.error(error.code, error.request_id);
+ * ```
+ *
+ * Methods never throw for an API or network failure: they resolve to
+ * `{ data, error, headers }`. The constructor throws only on a missing or
+ * malformed key.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export class SendAndRetain {
+  constructor(apiKeyOrOptions?: string | ClientOptions, options: ClientOptions = {}) {
+    const resolved =
+      typeof apiKeyOrOptions === "string" ? { ...options, apiKey: apiKeyOrOptions } : (apiKeyOrOptions ?? options);
+    Object.assign(this, resources(resolved));
+  }
+}
+
+/** Functional alias for `new SendAndRetain(options)`. */
+export function createClient(options: ClientOptions = {}): SendAndRetain {
+  return new SendAndRetain(options);
+}
+
+export { DEFAULT_BASE_URL, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, rateLimit, requestId, suggestedAction } from "./runtime.js";
+export type { ListPage, RateLimit } from "./runtime.js";
+export type { components, operations, paths, webhooks } from "./schema.js";

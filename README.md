@@ -1,153 +1,208 @@
-# @sendandretain/sdk
+# Send & Retain Node.js SDK
 
-A thin, fully-typed Node/TypeScript client for the **Send & Retain** API — send
-transactional and lifecycle email, sync contacts, emit the events that drive
-automations, and manage templates, segments, suppressions and sending setup.
-
-Every request and response type is generated from the API's OpenAPI spec
-(committed here as [`openapi.json`](./openapi.json)), so field names and shapes
-match the live API and there is nothing hand-maintained to drift. CI fails if
-the committed spec and the generated types disagree.
-
-## Install
+The official Node.js SDK for the [Send & Retain](https://sendandretain.com) email API — send email,
+sync contacts, emit events that drive automations, and verify webhooks. Every request and response
+type is generated from the [OpenAPI spec](./openapi.json).
 
 ```bash
 npm install @sendandretain/sdk
 ```
 
-Requires Node 18+ (it uses the platform `fetch`). ESM-only.
+Node 20 or later. ESM and CommonJS. Server-side only — never ship an API key to a browser.
 
 ## Quickstart
 
+Create a key in the dashboard under **Settings → API keys** and set it as
+`SENDANDRETAIN_API_KEY`.
+
 ```ts
-import { createClient } from "@sendandretain/sdk";
+import { SendAndRetain } from "@sendandretain/sdk";
 
-const emails = createClient({ apiKey: process.env.SENDANDRETAIN_API_KEY! });
+const sendandretain = new SendAndRetain(); // reads SENDANDRETAIN_API_KEY
 
-const { data, error } = await emails.emails.send(
-  { to: "jane@acme.com", template: "welcome", props: { firstName: "Jane" } },
-  { idempotencyKey: "welcome-jane-1" }
-);
+const { data, error } = await sendandretain.emails.send({
+  to: "jane@acme.com",
+  template: "welcome",
+  props: { firstName: "Jane" },
+});
 
-if (error) throw new Error(`${error.error.code}: ${error.error.message}`);
-console.log(data); // { id: "msg_…", status: "sent" }
+if (error) {
+  console.error(error.code, error.message, error.request_id);
+} else {
+  console.log(data.id); // queued — delivery is reported by webhook
+}
 ```
 
-Every method returns openapi-fetch's `{ data, error, response }` union: on a
-non-2xx response `error` holds the typed `{ error: { code, message } }`
-envelope and `data` is `undefined`. **No exceptions are thrown for API errors** —
-only for transport failures. `error.error.code` is a stable, machine-readable
-string (`template_not_found`, `suppressed`, `sends_paused`, `daily_cap`,
-`rate_limited`, `provider_error`, …); branch on it rather than on the message.
+Sending needs a key with the `write` scope **and** the send grant (the dashboard's
+**Send + manage**). A send is accepted with `202` and delivered in the background; follow it with
+`emails.get(id)` or, better, a [webhook](#webhooks).
+
+## Responses and errors
+
+Every method resolves to `{ data, error, headers }` and never throws for an API or network failure:
+
+```ts
+const { data, error, headers } = await sendandretain.templates.get("welcome");
+
+if (error) {
+  switch (error.code) {
+    case "not_found": // 404
+      break;
+    case "rate_limited": // already retried for you; this is after the last attempt
+      break;
+    case "network_error": // no response arrived — status is null
+      break;
+  }
+  console.error(`support reference: ${error.request_id}`);
+}
+```
+
+`error` is `{ code, message, status, request_id, ...extra }`. Branch on `code` — the full list is in
+the [error reference](https://sendandretain.com/docs/api/errors). A 403 also carries
+`required_scope` or `required_grant`. The constructor is the only thing that throws: on a missing or
+malformed key.
+
+## Idempotency
+
+Pass an `idempotencyKey` on any create to make it safe to retry:
+
+```ts
+await sendandretain.emails.send(
+  { to: "jane@acme.com", template: "welcome" },
+  { idempotencyKey: "welcome/user_42" }
+);
+```
+
+The same key and body replays the first result (`Idempotency-Replay: true`) instead of sending
+again; a different body with the same key is a `conflict` error. Keys live 24 hours. When you pass
+none, the SDK generates one per call, so its own retries can never send twice.
+
+## Retries and timeouts
+
+Requests that fail with `408`, `429` or `5xx`, or never get a response, are retried twice with
+exponential backoff and jitter, honouring `Retry-After`. Only safe requests are retried: reads,
+updates, deletes, and creates carrying an idempotency key — which is all of them, by default. A
+`429` `daily_cap` / `monthly_cap` is a sending quota, not a throttle, and is returned at once.
+
+```ts
+const sendandretain = new SendAndRetain({ maxRetries: 4, timeout: 10_000 });
+
+// Per call: cancel, cap the whole call, or add headers.
+await sendandretain.contacts.list({ limit: 100 }, { signal, timeout: 5_000 });
+```
+
+## Pagination
+
+Lists answer `{ object: "list", data, has_more, next_cursor }`. `iterate()` walks every page:
+
+```ts
+for await (const email of sendandretain.emails.list.iterate({ status: "bounced" })) {
+  console.log(email.to);
+}
+
+// Or page by hand.
+const page = await sendandretain.contacts.list({ limit: 100 });
+const next = page.data?.next_cursor
+  ? await sendandretain.contacts.list({ limit: 100, cursor: page.data.next_cursor })
+  : null;
+```
+
+## Webhooks
+
+Subscribe an endpoint, store the secret it returns (shown once), and verify every delivery against
+the **raw** body:
+
+```ts
+const { data } = await sendandretain.webhooks.create({
+  url: "https://acme.com/api/webhooks/sendandretain",
+  event_types: ["email.delivered", "email.bounced", "email.complained"],
+});
+// data.secret → SENDANDRETAIN_WEBHOOK_SECRET
+
+// In your handler:
+import { verifyWebhook, WebhookVerificationError } from "@sendandretain/sdk";
+
+const event = verifyWebhook({
+  payload: await req.text(), // the raw body, not req.json()
+  headers: req.headers,
+  secret: process.env.SENDANDRETAIN_WEBHOOK_SECRET!,
+});
+
+if (event.type === "email.bounced") {
+  // event is narrowed to the bounced payload
+}
+```
+
+`verifyWebhook` throws `WebhookVerificationError` on a bad signature or a stale timestamp — answer
+`400`. Deliveries are [Standard Webhooks](https://www.standardwebhooks.com), at-least-once and
+unordered: dedupe on `event.id`, order on `event.occurred_at`. Missed one? `webhooks.deliveries.replay(id, deliveryId)`.
+
+See [`examples/`](./examples) for a plain Node server and a Next.js route handler.
+
+## Resources
+
+| Resource | Methods |
+| --- | --- |
+| `emails` | `send`, `get`, `list` (`.iterate`), `reschedule`, `cancel`, `batch.send` |
+| `contacts` | `upsert`, `get`, `list` (`.iterate`), `delete`, `import`, `events` (`.iterate`) |
+| `events` | `emit` |
+| `suppressions` | `list` (`.iterate`), `add`, `remove`, `import` |
+| `templates` | `create`, `list`, `get`, `update`, `updateMeta`, `archive`, `listVersions`, `publish`, `unpublish`, `render`, `test`, `addTranslation` |
+| `automations` | `create`, `list`, `get`, `update`, `archive`, `setStatus`, `duplicate`, `backfill`, `preflight`, `runs` (`.iterate`), `metrics`, `setAbTest`, `promoteAbWinner`, `steps.{add,update,remove,move,syncProps}` |
+| `segments` | `create`, `list`, `update`, `delete`, `refreshCount` |
+| `domains` | `create`, `list`, `verify`, `delete` |
+| `senders` | `create`, `list`, `update`, `delete` |
+| `webhooks` | `create`, `list`, `get`, `update`, `delete`, `rotateSecret`, `test`, `deliveries.list` (`.iterate`), `deliveries.replay`, `verify` |
+| `metrics` | `get`, `trends`, `queueHealth` |
+| `settings` | `get`, `update`, `getBrand`, `updateBrand` |
+| `setup` | `onboarding`, `connection`, `registerProviderWebhook` |
+
+Every operation in the API has a method — a test fails if one is missing. `sendandretain.http` is
+the underlying [openapi-fetch](https://openapi-ts.dev/openapi-fetch/) client if you need the raw
+response.
+
+## TypeScript
+
+Request bodies, queries and responses are all typed from the spec. The generated types are exported
+for your own use:
+
+```ts
+import type { components, paths, WebhookEvent } from "@sendandretain/sdk";
+
+type Contact = components["schemas"]["ContactResult"];
+```
 
 ## Configuration
 
-```ts
-createClient({ apiKey, baseUrl?, fetch? });
-```
-
-- `apiKey` — a per-project API key (`aem_…`), created in the dashboard under
-  **Settings → API keys**. **Server-side only** — never ship it to the browser.
-  In Next.js, call this from Route Handlers or Server Actions, not Client
-  Components.
-- `baseUrl` — API origin. Defaults to `https://sendandretain.com` (exported as
-  `DEFAULT_BASE_URL`); override for a preview or self-hosted deployment, e.g.
-  `createClient({ apiKey, baseUrl: process.env.SENDANDRETAIN_BASE_URL })`.
-- `fetch` — inject a custom `fetch` for tests or non-Node runtimes.
-
-## Scopes and the send grant
-
-Authorization has two independent axes.
-
-The **scope** is ranked — a key satisfies any requirement at or below its own
-tier:
-
-| Scope     | Can do                                                                                                                                        |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `read`    | Read-only. Never changes anything, and **cannot send**.                                                                                       |
-| `write`   | Everything `read` does, plus managing contacts, templates, automations, segments and suppressions.                                            |
-| `admin`   | Everything `write` does, plus sending _configuration_: domains, senders, webhook registration, the kill switch, the daily cap, and the brand kit. |
-
-The **send grant** is a separate boolean, not a rung. Delivering mail to a real
-inbox — `emails.send`, `emails.reschedule`, `templates.test` and
-`POST /api/v1/emails/batch` — needs `write` **and** the grant; a key can hold
-`admin` and still be refused there. The dashboard mints that combination as
-**Send + manage**; **Manage only** is the same rung with the grant withheld.
-
-Everything else under `emails`, `contacts`, `events`, `suppressions`,
-`templates`, `automations`, `audience` and `metrics` needs `write`. `setup.*` and
-`settings.*` need `admin`, except `setup.onboarding()`, which is `read`. Give
-your application the lowest tier that works — for most applications that is
-**Send + manage**.
-
-A valid key that falls short gets `403 forbidden` (not `401`). The error body
-says which axis refused it: `required_scope` / `key_scope` for the tier, or
-`required_grant` when the tier was enough but the key lacks the grant. `401`
-means the key is missing, malformed, or revoked.
-
-Provider API keys (Resend / SendGrid) can **not** be set over the API at any
-scope — they only enter through the dashboard.
-
-## API surface
-
-The facade mirrors the REST API groups:
-
-| Group                | Methods                                                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `emails`             | `send`, `get`, `list`, `reschedule`, `cancel`                                                                      |
-| `contacts`           | `upsert`, `list`, `get`, `delete`, `import`, `events`                                                               |
-| `events`             | `emit`                                                                                                              |
-| `suppressions`       | `list`, `add`, `remove`, `import`                                                                                   |
-| `templates`          | `create`, `list`, `get`, `update`, `archive`, `updateMeta`, `listVersions`, `publish`, `render`, `test`, `addTranslation` |
-| `automations`        | `create`, `list`, `get`, `update`, `archive`, `setStatus`, `duplicate`, `preflight`, `listRuns`, `metrics`, `setAbTest`, `promoteAbWinner` |
-| `automations.steps`  | `add`, `update`, `remove`, `move`, `syncProps`                                                                      |
-| `audience.segments`  | `create`, `list`, `update`, `delete`, `refreshCount`                                                                |
-| `setup`              | `onboarding` (`read`), `connection`, `registerWebhooks`, `domains.*`, `senders.*` (`admin`)                         |
-| `metrics`            | `get`, `trends`, `queueHealth`                                                                                      |
-| `settings`           | `get`, `update`, `getBrand`, `updateBrand` (`admin`)                                                                |
-| `http`               | the underlying `openapi-fetch` client, for anything not on the facade                                               |
-
-The exported `paths`, `components` and `operations` types give you the raw
-generated shapes when you need them:
-
-```ts
-import type { components } from "@sendandretain/sdk";
-
-type SendResult = components["schemas"]["SendResult"];
-```
-
-### Things worth knowing before you call
-
-- **Idempotency.** `emails.send` takes an optional `idempotencyKey` (≤256 chars,
-  unique per logical send). A repeat returns the original result with
-  `deduplicated: true` instead of sending twice.
-- **One recipient per send.** There are no bulk campaigns; broad sending happens
-  through event-triggered automations you explicitly enable.
-- **Templates are create → render → test → publish.** Drafts cannot send, and
-  published versions are immutable — every edit produces a new draft you publish
-  deliberately.
-- **Automations are always created paused.** `automations.setStatus` is the only
-  call that starts real sending, and activating requires
-  `{ status: "active", confirm: true }`.
-- **Complaint suppressions are permanent.** `suppressions.remove` will not lift
-  them.
+| Option | Env var | Default |
+| --- | --- | --- |
+| `apiKey` | `SENDANDRETAIN_API_KEY` | — (required) |
+| `baseUrl` | `SENDANDRETAIN_BASE_URL` | `https://sendandretain.com` |
+| `maxRetries` | | `2` |
+| `timeout` | | `60000` ms per attempt |
+| `fetch` | | global `fetch` |
 
 ## Development
 
 ```bash
-npm install
-npm run gen        # openapi.json -> src/schema.d.ts (committed)
-npm run verify     # fail if src/schema.d.ts is stale vs openapi.json
-npm run typecheck
+npm ci
+npm run gen      # regenerate src/schema.d.ts from openapi.json
+npm run verify   # fail if they drifted
 npm test
-npm run build      # tsup -> dist/
+npm run build
 ```
 
-`openapi-typescript` is pinned to an exact version because its output varies
-across releases; an unpinned range would turn a routine install into phantom
-drift. To pick up an API change: replace `openapi.json`, run `npm run gen`, and
-commit both files in the same change.
+`openapi.json`, `src/runtime.ts`, `LICENSE` and `.github/` are synced from the Send & Retain source
+tree and overwritten on every sync — change them there, not here. Everything else in this repo is
+hand-written.
+
+## Links
+
+- [API reference](https://sendandretain.com/docs/api)
+- [OpenAPI spec](https://sendandretain.com/openapi.json)
+- [Python SDK](https://github.com/sendandretain/sendandretain-py)
+- [Claude Code plugin](https://github.com/sendandretain/sendandretain-plugin)
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT

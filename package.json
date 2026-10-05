@@ -1,18 +1,18 @@
 {
   "name": "@sendandretain/sdk",
-  "version": "0.1.0",
-  "description": "Thin, fully-typed TypeScript/Node client for the Send & Retain email API. Types generated from the OpenAPI spec.",
+  "version": "0.2.0",
+  "description": "The Send & Retain SDK for Node.js \u2014 send email, sync contacts and verify webhooks, fully typed from the OpenAPI spec.",
   "license": "MIT",
-  "author": "Trendly Studio",
+  "author": "Send & Retain",
   "keywords": [
     "email",
     "transactional-email",
-    "lifecycle-email",
     "api-client",
     "sdk",
     "typescript",
     "openapi",
-    "sendandretain"
+    "sendandretain",
+    "webhooks"
   ],
   "repository": {
     "type": "git",
@@ -28,21 +28,28 @@
   "type": "module",
   "sideEffects": false,
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
-  "main": "./dist/index.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "gen": "openapi-typescript openapi.json -o src/schema.d.ts",
@@ -51,16 +58,18 @@
     "verify": "node scripts/verify-schema-sync.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run gen && npm run build"
+    "prepublishOnly": "npm run gen && npm run build",
+    "typecheck:examples": "tsc --noEmit -p examples/tsconfig.json"
   },
   "dependencies": {
-    "openapi-fetch": "^0.14.1"
+    "openapi-fetch": "0.14.1",
+    "standardwebhooks": "1.1.1"
   },
   "devDependencies": {
-    "@types/node": "^22.20.1",
+    "@types/node": "22.20.1",
     "openapi-typescript": "7.9.1",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
   }
 }

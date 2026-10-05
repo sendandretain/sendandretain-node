@@ -233,7 +233,7 @@ export interface paths {
         post?: never;
         /**
          * Archive a template
-         * @description Archives the template. Refused while an ACTIVE automation still sends it, so a live sequence can't be broken from the API.
+         * @description Archives the template. Refused while an ACTIVE automation still sends it, so a live automation can't be broken from the API.
          */
         delete: operations["archiveTemplate"];
         options?: never;
@@ -383,7 +383,7 @@ export interface paths {
         put?: never;
         /**
          * Create an automation
-         * @description Creates a trigger-driven sequence, optionally with its steps. **Always created paused** — enabling is a separate, deliberate call (`POST /api/v1/automations/{id}/status`) so a programmatic mistake can never start sending. Step objects are camelCase (they reuse the internal step schema); the surrounding body is snake_case like the rest of the API.
+         * @description Creates a trigger-driven automation, optionally with its steps. **Always created paused** — enabling is a separate, deliberate call (`POST /api/v1/automations/{id}/status`) so a programmatic mistake can never start sending. Step objects are camelCase (they reuse the internal step schema); the surrounding body is snake_case like the rest of the API.
          */
         post: operations["createAutomation"];
         delete?: never;
@@ -407,7 +407,7 @@ export interface paths {
         put: operations["updateAutomationStep"];
         /**
          * Append automation steps
-         * @description Appends steps to a sequence or a branch lane. Appending to a live automation is safe — in-flight contacts advance by stable step id, so they are never disturbed. Use `after_position` to insert, or `parent_step_id` + `lane_key` to target a branch lane.
+         * @description Appends steps to an automation or a branch lane. Appending to a live automation is safe — in-flight contacts advance by stable step id, so they are never disturbed. Use `after_position` to insert, or `parent_step_id` + `lane_key` to target a branch lane.
          */
         post: operations["addAutomationSteps"];
         /**
@@ -419,7 +419,7 @@ export interface paths {
         head?: never;
         /**
          * Bulk-set step props
-         * @description Refreshes `props_overrides` across send steps by position — the content-pipeline path for a recurring sequence whose copy changes per edition. `merge: true` shallow-merges into the existing overrides instead of replacing them.
+         * @description Refreshes `props_overrides` across send steps by position — the content-pipeline path for a recurring automation whose copy changes per edition. `merge: true` shallow-merges into the existing overrides instead of replacing them.
          */
         patch: operations["syncAutomationStepProps"];
         trace?: never;
@@ -579,7 +579,7 @@ export interface paths {
         };
         /**
          * Pre-launch check
-         * @description Read-only dry run of everything activation would validate: published templates, lane-tree integrity, a resolvable sender, a trigger something actually emits. `ready` reflects BLOCKING checks only. Run it in CI to catch a broken sequence before anyone tries to turn it on.
+         * @description Read-only dry run of everything activation would validate: published templates, lane-tree integrity, a resolvable sender, a trigger something actually emits. `ready` reflects BLOCKING checks only. Run it in CI to catch a broken automation before anyone tries to turn it on.
          */
         get: operations["preflightAutomation"];
         put?: never;
@@ -1210,7 +1210,272 @@ export interface paths {
         trace?: never;
     };
 }
-export type webhooks = Record<string, never>;
+export interface webhooks {
+    "email.sent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.sent
+         * @description The provider accepted the message.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_sent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.delivered": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.delivered
+         * @description The recipient's mail server accepted the message.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_delivered"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.delivery_delayed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.delivery_delayed
+         * @description Delivery is being retried by the provider.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_delivery_delayed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.bounced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.bounced
+         * @description The message bounced. Hard bounces suppress the address automatically.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_bounced"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.complained": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.complained
+         * @description The recipient marked the message as spam. The address is suppressed permanently.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_complained"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.opened": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.opened
+         * @description The recipient opened the message (requires open tracking).
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_opened"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.clicked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.clicked
+         * @description The recipient clicked a tracked link (requires click tracking).
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_clicked"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.unsubscribed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.unsubscribed
+         * @description The recipient unsubscribed.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_unsubscribed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.suppressed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.suppressed
+         * @description The send was refused because the address is suppressed.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_suppressed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.failed
+         * @description The send failed permanently after retries.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_failed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "email.canceled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * email.canceled
+         * @description A scheduled send was canceled.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_email_canceled"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "webhook.test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * webhook.test
+         * @description Sent by `POST /api/v1/webhooks/{id}/test`. Carries no message.
+         *
+         *     Signed with [Standard Webhooks](https://www.standardwebhooks.com). At-least-once and unordered. Payloads are at most 64 KB. Answer any 2xx within 10 seconds; anything else is retried on the published curve.
+         */
+        post: operations["webhook_webhook_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+}
 export interface components {
     schemas: {
         UpdateAutomation___schema0: {
@@ -1561,6 +1826,392 @@ export interface components {
                 value?: unknown;
             } | components["schemas"]["AddAutomationSteps___schema1"])[];
         };
+        /** @description Every list answers this shape. Keep requesting with `?cursor=<next_cursor>` until `has_more` is false. */
+        ListEnvelope: {
+            /** @enum {string} */
+            object: "list";
+            data: unknown[];
+            has_more: boolean;
+            next_cursor: string | null;
+        };
+        /** @description The message the event is about. */
+        WebhookMessage: {
+            id: string;
+            to: string;
+            from: string;
+            subject?: string | null;
+            template?: string | null;
+            status: string;
+            tags?: {
+                name: string;
+                value: string;
+            }[] | null;
+            source: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+        };
+        /** @description The provider accepted the message. */
+        WebhookEventEmailSent: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.sent";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: Record<string, never>;
+            };
+        };
+        /** @description The recipient's mail server accepted the message. */
+        WebhookEventEmailDelivered: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.delivered";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: Record<string, never>;
+            };
+        };
+        /** @description Delivery is being retried by the provider. */
+        WebhookEventEmailDeliveryDelayed: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.delivery_delayed";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    reason?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The message bounced. Hard bounces suppress the address automatically. */
+        WebhookEventEmailBounced: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.bounced";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    type?: string | number | boolean;
+                    sub_type?: string | number | boolean;
+                    diagnostic?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The recipient marked the message as spam. The address is suppressed permanently. */
+        WebhookEventEmailComplained: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.complained";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    feedback_type?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The recipient opened the message (requires open tracking). */
+        WebhookEventEmailOpened: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.opened";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    user_agent?: string | number | boolean;
+                    ip?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The recipient clicked a tracked link (requires click tracking). */
+        WebhookEventEmailClicked: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.clicked";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    link?: string | number | boolean;
+                    user_agent?: string | number | boolean;
+                    ip?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The recipient unsubscribed. */
+        WebhookEventEmailUnsubscribed: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.unsubscribed";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    scope?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The send was refused because the address is suppressed. */
+        WebhookEventEmailSuppressed: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.suppressed";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    reason?: string | number | boolean;
+                };
+            };
+        };
+        /** @description The send failed permanently after retries. */
+        WebhookEventEmailFailed: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.failed";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: {
+                    reason?: string | number | boolean;
+                    attempts?: string | number | boolean;
+                };
+            };
+        };
+        /** @description A scheduled send was canceled. */
+        WebhookEventEmailCanceled: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "email.canceled";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: components["schemas"]["WebhookMessage"] | null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: Record<string, never>;
+            };
+        };
+        /** @description Sent by `POST /api/v1/webhooks/{id}/test`. Carries no message. */
+        WebhookEventWebhookTest: {
+            /** @description The delivery id — also sent as `webhook-id`. Dedupe on it. */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "webhook.test";
+            /** @enum {string} */
+            version: "1";
+            /**
+             * Format: date-time
+             * @description When we queued it.
+             */
+            created_at: string;
+            /**
+             * Format: date-time
+             * @description When it happened. Order on this, never on arrival.
+             */
+            occurred_at: string;
+            data: {
+                event_id: string | null;
+                message: null;
+                /** @description Provider detail, normalised. Fields are present only when the provider reported them. */
+                detail: Record<string, never>;
+            };
+        };
+        /** @description Any event we deliver. Discriminate on `type`. */
+        WebhookEvent: components["schemas"]["WebhookEventEmailSent"] | components["schemas"]["WebhookEventEmailDelivered"] | components["schemas"]["WebhookEventEmailDeliveryDelayed"] | components["schemas"]["WebhookEventEmailBounced"] | components["schemas"]["WebhookEventEmailComplained"] | components["schemas"]["WebhookEventEmailOpened"] | components["schemas"]["WebhookEventEmailClicked"] | components["schemas"]["WebhookEventEmailUnsubscribed"] | components["schemas"]["WebhookEventEmailSuppressed"] | components["schemas"]["WebhookEventEmailFailed"] | components["schemas"]["WebhookEventEmailCanceled"] | components["schemas"]["WebhookEventWebhookTest"];
         /** @description Every 4xx/5xx response uses this envelope. */
         Error: {
             error: {
@@ -1630,6 +2281,11 @@ export interface components {
              * @example delivered
              */
             status?: string;
+            /**
+             * @description Type of the newest event in `events`, or null before the first.
+             * @example delivered
+             */
+            last_event?: string | null;
             /** @example api */
             source?: string;
             error?: string | null;
@@ -1676,7 +2332,7 @@ export interface components {
             skipped?: {
                 automation_id?: string;
                 /**
-                 * @description `filtered` — the trigger filter excluded this contact. `guarded` — they have already been through this flow. `suppressed` — they opted out. `exclusive` — a higher-priority exclusive automation took them. `no_steps` — the automation has no steps. `already_running` — a run is already in flight.
+                 * @description `filtered` — the trigger filter excluded this contact. `guarded` — they have already been through this automation. `suppressed` — they opted out. `exclusive` — a higher-priority exclusive automation took them. `no_steps` — the automation has no steps. `already_running` — a run is already in flight.
                  * @enum {string}
                  */
                 reason?: "filtered" | "guarded" | "suppressed" | "exclusive" | "no_steps" | "already_running";
@@ -1686,9 +2342,29 @@ export interface components {
         };
     };
     responses: never;
-    parameters: never;
+    parameters: {
+        /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+        IdempotencyKey: string;
+        /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+        Cursor: string;
+    };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Unique id for this request — echoes yours when you send a valid one (`[A-Za-z0-9._-]{1,128}`). Errors repeat it in the body as `request_id`; quote it in a support request. */
+        "X-Request-Id": string;
+        /** @description Requests allowed per window for this key and bucket. */
+        "RateLimit-Limit": number;
+        /** @description Requests left in the current window. */
+        "RateLimit-Remaining": number;
+        /** @description Seconds until the window refills. */
+        "RateLimit-Reset": number;
+        /** @description The window, e.g. `120;w=60`. */
+        "RateLimit-Policy": string;
+        /** @description Seconds to wait before retrying. */
+        "Retry-After": number;
+        /** @description `true` when this response replays the result of an earlier request with the same `Idempotency-Key`. No new work was done. */
+        "Idempotency-Replay": "true";
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -1712,10 +2388,13 @@ export interface operations {
                  */
                 limit?: number;
                 /**
-                 * @description Return messages created before this ISO timestamp.
+                 * @deprecated
+                 * @description Deprecated — use `cursor`. ISO 8601 `created_at`: rows older than this.
                  * @example 2026-07-20T00:00:00Z
                  */
                 before?: string;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -1726,18 +2405,33 @@ export interface operations {
             /** @description A page of messages. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: components["schemas"]["MessageStatus"][];
-                        has_more?: boolean;
+                        data: components["schemas"]["MessageStatus"][];
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description Unknown status filter. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1753,6 +2447,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1768,6 +2463,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1778,6 +2474,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -1897,6 +2614,8 @@ export interface operations {
             /** @description Idempotent replay — the `Idempotency-Key` matched a send we already accepted. Carries that send's current status. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1911,6 +2630,8 @@ export interface operations {
             /** @description Accepted. The message is recorded and will be delivered by the worker — `queued` now, or `scheduled` when you passed a future `scheduled_at`. */
             202: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1924,6 +2645,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1939,6 +2665,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1954,6 +2681,7 @@ export interface operations {
             /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1972,6 +2700,7 @@ export interface operations {
             /** @description No template with that slug in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1987,6 +2716,7 @@ export interface operations {
             /** @description Template not published, or sends are paused (kill switch). */
             409: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2002,6 +2732,7 @@ export interface operations {
             /** @description Recipient is on the suppression list. */
             422: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2017,6 +2748,8 @@ export interface operations {
             /** @description Daily or monthly send cap reached for this project (provider plan or project setting). */
             429: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "Retry-After": components["headers"]["Retry-After"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2032,6 +2765,7 @@ export interface operations {
             /** @description The email provider rejected the send. */
             502: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2115,6 +2849,8 @@ export interface operations {
             /** @description Accepted. Every entry has a result; read `data` for per-entry outcomes. */
             202: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2163,6 +2899,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2178,6 +2919,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2193,6 +2935,7 @@ export interface operations {
             /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2228,6 +2971,11 @@ export interface operations {
             /** @description The message and its events. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2266,6 +3014,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2281,6 +3030,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2299,6 +3049,11 @@ export interface operations {
             /** @description No such message in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2306,6 +3061,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No such message in this project."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2331,6 +3107,7 @@ export interface operations {
             /** @description Canceled. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2348,6 +3125,7 @@ export interface operations {
             /** @description The message isn't in a scheduled state. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2363,6 +3141,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2378,6 +3157,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2396,6 +3176,7 @@ export interface operations {
             /** @description No such message in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2441,6 +3222,7 @@ export interface operations {
             /** @description Rescheduled. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2460,6 +3242,7 @@ export interface operations {
             /** @description Invalid time, or the message isn't scheduled. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2475,6 +3258,7 @@ export interface operations {
             /** @description Missing or invalid key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2490,6 +3274,7 @@ export interface operations {
             /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2508,6 +3293,7 @@ export interface operations {
             /** @description No such message in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2535,8 +3321,13 @@ export interface operations {
                  * @example 50
                  */
                 limit?: number;
-                /** @description Return contacts created before this ISO timestamp. */
+                /**
+                 * @deprecated
+                 * @description Deprecated — use `cursor`. ISO 8601 `created_at`: rows older than this.
+                 */
                 before?: string;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -2547,18 +3338,29 @@ export interface operations {
             /** @description A page of contacts. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: Record<string, never>[];
-                        has_more?: boolean;
+                        data: Record<string, never>[];
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2574,6 +3376,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2584,6 +3387,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2646,6 +3470,11 @@ export interface operations {
             /** @description Existing contact updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2659,6 +3488,11 @@ export interface operations {
             /** @description New contact created. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2672,6 +3506,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2687,6 +3526,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2702,6 +3542,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2712,6 +3553,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2734,6 +3596,11 @@ export interface operations {
             /** @description The contact. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2743,6 +3610,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2758,6 +3626,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2776,6 +3645,11 @@ export interface operations {
             /** @description No such contact in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2783,6 +3657,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No such contact in this project."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2805,6 +3700,11 @@ export interface operations {
             /** @description Deleted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2817,6 +3717,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2832,6 +3733,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2850,6 +3752,11 @@ export interface operations {
             /** @description No such contact in this project. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2857,6 +3764,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No such contact in this project."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -2874,6 +3802,8 @@ export interface operations {
                 reason?: "unsubscribe" | "invalid" | "bounce" | "complaint" | "manual";
                 /** @description Page size (1–500, default 100). */
                 limit?: number;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path?: never;
@@ -2884,17 +3814,29 @@ export interface operations {
             /** @description Suppressed addresses. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: Record<string, never>[];
+                        data: Record<string, never>[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2910,6 +3852,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2925,12 +3868,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     addSuppression: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -2958,6 +3925,12 @@ export interface operations {
             /** @description Suppressed. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2970,6 +3943,11 @@ export interface operations {
             /** @description Invalid email or reason. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -2985,6 +3963,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3000,6 +3979,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3010,6 +3990,47 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3032,6 +4053,11 @@ export interface operations {
             /** @description Removed. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3044,6 +4070,11 @@ export interface operations {
             /** @description Missing email, or the suppression is permanent (complaint). */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3059,6 +4090,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3074,6 +4106,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3084,6 +4117,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3163,6 +4217,7 @@ export interface operations {
             /** @description Accepted. The event is durably stored and will be processed in the background. A repeated `dedupe_key` is accepted the same way and collapses when processed, so a retry after a timeout is always safe. */
             202: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3181,6 +4236,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3196,6 +4256,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3211,6 +4272,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3240,11 +4302,16 @@ export interface operations {
             /** @description Templates. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             /** @example welcome */
                             slug?: string;
@@ -3258,12 +4325,23 @@ export interface operations {
                             /** Format: date-time */
                             updated_at?: string;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3279,6 +4357,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3294,6 +4373,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3309,12 +4389,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createTemplate: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3347,7 +4451,7 @@ export interface operations {
                     name: string;
                     description?: string;
                     /**
-                     * @description `transactional` (receipts, resets — delivered even to unsubscribed contacts) or `lifecycle` (marketing — not delivered to unsubscribed contacts). Both carry List-Unsubscribe headers and an unsubscribe footer; the category decides only who an existing unsubscribe blocks.
+                     * @description `transactional` (receipts, resets — delivered even to unsubscribed contacts) or `lifecycle` (marketing email — not delivered to unsubscribed contacts). Both carry List-Unsubscribe headers and an unsubscribe footer; the category decides only who an existing unsubscribe blocks.
                      * @example transactional
                      * @enum {string}
                      */
@@ -3381,6 +4485,12 @@ export interface operations {
             /** @description Template created as an unpublished draft. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3403,6 +4513,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3418,6 +4533,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3433,6 +4549,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3443,6 +4560,47 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3468,6 +4626,11 @@ export interface operations {
             /** @description Template version. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3493,6 +4656,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3508,6 +4676,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3523,6 +4692,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3541,6 +4711,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3548,6 +4723,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3570,6 +4766,11 @@ export interface operations {
             /** @description Template archived. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3586,6 +4787,11 @@ export interface operations {
             /** @description Still in use by an active automation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3601,6 +4807,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3616,6 +4823,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3634,6 +4842,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3641,6 +4854,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3697,6 +4931,11 @@ export interface operations {
             /** @description New draft version created. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3717,6 +4956,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3732,6 +4976,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3747,6 +4992,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3765,6 +5011,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3772,6 +5023,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3818,6 +5090,11 @@ export interface operations {
             /** @description Meta updated. `version` is the new version number, or null when only the sender changed. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3834,6 +5111,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3849,6 +5131,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3864,6 +5147,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3882,6 +5166,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3889,6 +5178,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -3911,11 +5221,16 @@ export interface operations {
             /** @description Versions. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             /** @example 2 */
                             version?: number;
                             /** @example published */
@@ -3927,12 +5242,23 @@ export interface operations {
                             /** Format: date-time */
                             created_at?: string;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3948,6 +5274,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3963,6 +5290,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3981,6 +5309,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3988,6 +5321,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4021,6 +5375,11 @@ export interface operations {
             /** @description Version published. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4043,6 +5402,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4058,6 +5422,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4073,6 +5438,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4091,6 +5457,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4098,6 +5469,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4120,6 +5512,11 @@ export interface operations {
             /** @description Template unpublished. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4137,6 +5534,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4152,6 +5554,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4167,6 +5570,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4185,6 +5589,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4192,6 +5601,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4238,6 +5668,11 @@ export interface operations {
             /** @description Rendered output. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4257,6 +5692,11 @@ export interface operations {
             /** @description The template failed to compile or render. The message is the raw diagnostics. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4272,6 +5712,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4287,6 +5728,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4305,6 +5747,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4312,6 +5759,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4365,6 +5833,11 @@ export interface operations {
             /** @description Test sent. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4379,6 +5852,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4394,6 +5872,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4409,6 +5888,7 @@ export interface operations {
             /** @description The key's authorization is short on one of two axes: it is below `write`, or it lacks the approval grant. The grant is a separate boolean, not a rung above `write` — a key can hold `admin` and still be refused here. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4427,6 +5907,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4434,6 +5919,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4477,6 +5983,11 @@ export interface operations {
             /** @description Translation draft created. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4494,6 +6005,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4509,6 +6025,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4524,6 +6041,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4542,6 +6060,11 @@ export interface operations {
             /** @description No template matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4549,6 +6072,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "No template \"welcome\"."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4568,6 +6112,11 @@ export interface operations {
             /** @description Automations. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4584,7 +6133,7 @@ export interface operations {
                      *       ]
                      *     } */
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             name?: string;
                             /** @example paused */
@@ -4593,12 +6142,23 @@ export interface operations {
                             priority?: number;
                             step_count?: number;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4614,6 +6174,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4629,6 +6190,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4644,12 +6206,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createAutomation: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -4738,6 +6324,12 @@ export interface operations {
             /** @description Automation created, paused. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4757,6 +6349,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4772,6 +6369,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4787,6 +6385,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4797,6 +6396,47 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -4904,6 +6544,11 @@ export interface operations {
             /** @description Step updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4916,6 +6561,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4931,6 +6581,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4946,6 +6597,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4964,6 +6616,11 @@ export interface operations {
             /** @description No automation or step matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4971,6 +6628,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5028,6 +6706,11 @@ export interface operations {
             /** @description Steps appended. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5044,6 +6727,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5059,6 +6747,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5074,6 +6763,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5092,6 +6782,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5099,6 +6794,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5137,6 +6853,11 @@ export interface operations {
             /** @description Step removed. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5149,6 +6870,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5164,6 +6890,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5179,6 +6906,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5197,6 +6925,11 @@ export interface operations {
             /** @description No automation or step matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5204,6 +6937,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5254,6 +7008,11 @@ export interface operations {
             /** @description Steps updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5272,6 +7031,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5287,6 +7051,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5302,6 +7067,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5320,6 +7086,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5327,6 +7098,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5377,6 +7169,11 @@ export interface operations {
             /** @description Step moved. `position` is its new global address. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5389,6 +7186,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5404,6 +7206,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5419,6 +7222,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5437,6 +7241,11 @@ export interface operations {
             /** @description No automation or step matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5444,6 +7253,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5466,6 +7296,11 @@ export interface operations {
             /** @description Automation. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5504,6 +7339,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5519,6 +7359,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5534,6 +7375,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5552,6 +7394,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5559,6 +7406,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5581,6 +7449,11 @@ export interface operations {
             /** @description Automation archived. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5593,6 +7466,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5608,6 +7482,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5626,6 +7501,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5633,6 +7513,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5703,6 +7604,11 @@ export interface operations {
             /** @description Automation updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5714,6 +7620,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5729,6 +7640,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5744,6 +7656,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5762,6 +7675,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5769,6 +7687,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5811,6 +7750,11 @@ export interface operations {
             /** @description Status changed. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5824,6 +7768,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5839,6 +7788,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5854,6 +7804,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5872,6 +7823,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5887,6 +7843,11 @@ export interface operations {
             /** @description A send step points at an unpublished template. */
             409: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5894,6 +7855,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "template_not_published",
                      *         "message": "Step 2 uses template \"win-back-2\" which is not published."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -5931,6 +7913,11 @@ export interface operations {
             /** @description Preview, or the result of the enrollment. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5949,6 +7936,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5964,6 +7956,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5979,6 +7972,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5997,6 +7991,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6012,13 +8011,39 @@ export interface operations {
             /** @description Automation is paused, or too many contacts qualify. */
             409: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     /** @example {
                      *       "error": {
                      *         "code": "invalid_request",
-                     *         "message": "Resume the automation before backfilling — a paused flow enrolls nobody."
+                     *         "message": "Resume the automation before backfilling — a paused automation enrolls nobody."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6033,6 +8058,8 @@ export interface operations {
                 status?: string;
                 /** @description Max rows (1–100, default 50). */
                 limit?: number;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -6046,11 +8073,16 @@ export interface operations {
             /** @description Runs. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             /** @example active */
                             status?: string;
@@ -6069,13 +8101,23 @@ export interface operations {
                             /** Format: date-time */
                             finished_at?: string | null;
                         }[];
-                        has_more?: boolean;
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6091,6 +8133,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6106,6 +8149,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6124,6 +8168,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6131,6 +8180,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6156,6 +8226,11 @@ export interface operations {
             /** @description Funnel. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6187,6 +8262,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6202,6 +8282,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6217,6 +8298,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6235,6 +8317,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6242,6 +8329,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6264,6 +8372,11 @@ export interface operations {
             /** @description Check results. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6282,6 +8395,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6297,6 +8415,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6312,6 +8431,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6330,6 +8450,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6342,12 +8467,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     duplicateAutomation: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 /** @description Automation id or exact name. */
                 id: string;
@@ -6359,6 +8508,12 @@ export interface operations {
             /** @description Copy created, paused. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6374,6 +8529,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6389,6 +8545,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6407,6 +8564,11 @@ export interface operations {
             /** @description No automation matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6414,6 +8576,47 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6468,6 +8671,11 @@ export interface operations {
             /** @description Split configured. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6481,6 +8689,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6496,6 +8709,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6511,6 +8725,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6529,6 +8744,11 @@ export interface operations {
             /** @description No automation or step matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6536,6 +8756,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6571,6 +8812,11 @@ export interface operations {
             /** @description Winner promoted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6585,6 +8831,11 @@ export interface operations {
             /** @description The test can't be called yet. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6600,6 +8851,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6615,6 +8867,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6633,6 +8886,11 @@ export interface operations {
             /** @description No automation or step matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6640,6 +8898,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Automation not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6659,11 +8938,16 @@ export interface operations {
             /** @description Domains. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             domain?: string;
                             /** @example resend */
@@ -6693,12 +8977,23 @@ export interface operations {
                             /** @example tk */
                             tracking_subdomain?: string | null;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6714,6 +9009,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6729,6 +9025,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6744,12 +9041,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createDomain: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6771,6 +9092,12 @@ export interface operations {
             /** @description Domain registered. Publish `dns_records`, then verify. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6820,6 +9147,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6835,6 +9167,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6850,6 +9183,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6860,6 +9194,47 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6882,6 +9257,11 @@ export interface operations {
             /** @description Domain deleted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6897,6 +9277,11 @@ export interface operations {
             /** @description The default sender lives on this domain. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6912,6 +9297,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6927,6 +9313,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6945,6 +9332,11 @@ export interface operations {
             /** @description No domain matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6952,6 +9344,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Domain not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -6974,6 +9387,11 @@ export interface operations {
             /** @description Current verification state. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7016,6 +9434,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7031,6 +9450,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7049,6 +9469,11 @@ export interface operations {
             /** @description No domain matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7056,6 +9481,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Domain not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7075,11 +9521,16 @@ export interface operations {
             /** @description Senders, default first. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             from_name?: string;
                             from_email?: string;
@@ -7091,12 +9542,23 @@ export interface operations {
                             /** Format: date-time */
                             created_at?: string;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7112,6 +9574,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7127,6 +9590,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7142,12 +9606,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createSender: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -7184,6 +9672,12 @@ export interface operations {
             /** @description Sender created. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7198,6 +9692,11 @@ export interface operations {
             /** @description The address isn't on a verified domain. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7213,6 +9712,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7228,6 +9728,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7238,6 +9739,47 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7260,6 +9802,11 @@ export interface operations {
             /** @description Sender deleted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7272,6 +9819,11 @@ export interface operations {
             /** @description This is the default sender. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7287,6 +9839,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7302,6 +9855,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7320,6 +9874,11 @@ export interface operations {
             /** @description No sender matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7327,6 +9886,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Sender not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7369,6 +9949,11 @@ export interface operations {
             /** @description Sender updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7381,6 +9966,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7396,6 +9986,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7411,6 +10002,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7429,6 +10021,11 @@ export interface operations {
             /** @description No sender matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7436,6 +10033,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Sender not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7455,6 +10073,11 @@ export interface operations {
             /** @description Setup status. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7481,6 +10104,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7496,6 +10124,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7511,6 +10140,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7521,6 +10151,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7540,6 +10191,11 @@ export interface operations {
             /** @description Setup progress. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7559,6 +10215,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7574,6 +10235,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7589,6 +10251,7 @@ export interface operations {
             /** @description The key is below `read`. Scopes are ranked, so any tier at or above `read` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7599,6 +10262,27 @@ export interface operations {
                      *         "required_scope": "read",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7618,6 +10302,11 @@ export interface operations {
             /** @description Webhook registered. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7630,6 +10319,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7645,6 +10339,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7660,6 +10355,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7670,6 +10366,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7689,6 +10406,11 @@ export interface operations {
             /** @description Webhook registered. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7701,6 +10423,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7716,6 +10443,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7731,6 +10459,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7741,6 +10470,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -7760,11 +10510,16 @@ export interface operations {
             /** @description Endpoints. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             /** @example whe_9f2a1c */
                             id?: string;
                             /** @example https://hooks.acme.com/sendandretain */
@@ -7798,12 +10553,23 @@ export interface operations {
                             /** Format: date-time */
                             updated_at?: string;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7819,6 +10585,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7834,6 +10601,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7849,12 +10617,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createWebhookEndpoint: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -7868,7 +10660,7 @@ export interface operations {
                      */
                     url: string;
                     /**
-                     * @description Events to receive. Subscribe to `webhook.test` as well so you can verify the endpoint before real mail flows.
+                     * @description Events to receive. Subscribe to `webhook.test` as well so you can verify the endpoint before real mail goes out.
                      * @example [
                      *       "email.delivered",
                      *       "email.bounced",
@@ -7888,6 +10680,12 @@ export interface operations {
             /** @description Endpoint created. `secret` appears in this response only. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7935,6 +10733,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7950,6 +10753,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7965,6 +10769,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7983,6 +10788,11 @@ export interface operations {
             /** @description An endpoint with this URL already exists in this project. */
             409: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7990,6 +10800,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "conflict",
                      *         "message": "An endpoint with this URL already exists in this project."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8012,6 +10843,11 @@ export interface operations {
             /** @description Endpoint. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8054,6 +10890,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8069,6 +10910,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8084,6 +10926,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8102,6 +10945,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8109,6 +10957,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Webhook endpoint not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8131,6 +11000,11 @@ export interface operations {
             /** @description Endpoint deleted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8142,6 +11016,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8157,6 +11036,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8172,6 +11052,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8190,6 +11071,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8197,6 +11083,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Webhook endpoint not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8234,6 +11141,11 @@ export interface operations {
             /** @description Endpoint updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8276,6 +11188,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8291,6 +11208,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8306,6 +11224,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8324,6 +11243,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8331,6 +11255,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Webhook endpoint not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8363,6 +11308,11 @@ export interface operations {
             /** @description Rotated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8380,6 +11330,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8395,6 +11350,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8410,6 +11366,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8428,6 +11385,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8435,6 +11397,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Webhook endpoint not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8457,6 +11440,11 @@ export interface operations {
             /** @description Test delivery queued. Poll the deliveries list for its outcome. */
             202: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8469,6 +11457,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8484,6 +11477,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8499,6 +11493,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8517,6 +11512,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8529,6 +11529,27 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listWebhookDeliveries: {
@@ -8536,10 +11557,15 @@ export interface operations {
             query?: {
                 /** @description pending | in_flight | delivered | failed | skipped. */
                 status?: string;
-                /** @description ISO 8601 created_at — return deliveries older than this. */
+                /**
+                 * @deprecated
+                 * @description Deprecated — use `cursor`. ISO 8601 `created_at`: rows older than this.
+                 */
                 before?: string;
                 /** @description Max rows (1–100, default 50). */
                 limit?: number;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -8553,11 +11579,16 @@ export interface operations {
             /** @description Deliveries. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             /**
                              * @description Also the `webhook-id` header. Stable across retries — dedupe on it.
                              * @example whd_44b1e0
@@ -8588,14 +11619,23 @@ export interface operations {
                             /** Format: date-time */
                             created_at?: string;
                         }[];
-                        /** @description More rows exist before the oldest returned. */
-                        has_more?: boolean;
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8611,6 +11651,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8626,6 +11667,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8644,6 +11686,11 @@ export interface operations {
             /** @description No webhook endpoint matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8651,6 +11698,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Webhook endpoint not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8675,6 +11743,11 @@ export interface operations {
             /** @description Replay queued. */
             202: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8686,6 +11759,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8701,6 +11779,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8716,6 +11795,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8734,6 +11814,11 @@ export interface operations {
             /** @description No delivery matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8749,6 +11834,11 @@ export interface operations {
             /** @description The delivery is still in progress. */
             409: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8756,6 +11846,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "conflict",
                      *         "message": "This delivery is still in progress."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8775,11 +11886,16 @@ export interface operations {
             /** @description Segments. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             name?: string;
                             description?: string | null;
@@ -8793,12 +11909,23 @@ export interface operations {
                             /** Format: date-time */
                             updated_at?: string;
                         }[];
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8814,6 +11941,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8829,6 +11957,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8844,12 +11973,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     createSegment: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -8885,6 +12038,12 @@ export interface operations {
             /** @description Segment created. */
             201: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8897,6 +12056,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8912,6 +12076,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8927,6 +12092,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8937,6 +12103,47 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -8959,6 +12166,11 @@ export interface operations {
             /** @description Segment deleted. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8971,6 +12183,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8986,6 +12199,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9004,6 +12218,11 @@ export interface operations {
             /** @description No segment matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9011,6 +12230,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Segment not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9047,6 +12287,11 @@ export interface operations {
             /** @description Segment updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9058,6 +12303,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9073,6 +12323,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9088,6 +12339,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9106,6 +12358,11 @@ export interface operations {
             /** @description No segment matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9113,6 +12370,27 @@ export interface operations {
                      *       "error": {
                      *         "code": "not_found",
                      *         "message": "Segment not found."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9135,6 +12413,11 @@ export interface operations {
             /** @description Count refreshed. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9148,6 +12431,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9163,6 +12447,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9181,6 +12466,11 @@ export interface operations {
             /** @description No segment matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9193,12 +12483,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     importContacts: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -9239,6 +12553,12 @@ export interface operations {
             /** @description Import finished (possibly partially). */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9255,6 +12575,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9270,6 +12595,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9285,6 +12611,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9300,6 +12627,47 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listContactEvents: {
@@ -9309,6 +12677,8 @@ export interface operations {
                 name?: string;
                 /** @description Max rows (1–100, default 50). */
                 limit?: number;
+                /** @description Opaque — pass the previous page's `next_cursor` to fetch the next page. A malformed cursor is refused, never treated as page one. */
+                cursor?: components["parameters"]["Cursor"];
             };
             header?: never;
             path: {
@@ -9322,11 +12692,16 @@ export interface operations {
             /** @description Events. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": {
-                        data?: {
+                        data: {
                             id?: string;
                             /** @example order.completed */
                             name?: string;
@@ -9337,13 +12712,23 @@ export interface operations {
                             /** Format: date-time */
                             created_at?: string;
                         }[];
-                        has_more?: boolean;
+                        /** @description More rows exist after this page. */
+                        has_more: boolean;
+                        /** @enum {string} */
+                        object: "list";
+                        /** @description Pass as `?cursor=` for the next page. Null on the last page. */
+                        next_cursor: string | null;
                     };
                 };
             };
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9359,6 +12744,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9374,6 +12760,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9392,6 +12779,11 @@ export interface operations {
             /** @description No contact matched. */
             404: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9404,12 +12796,36 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     importSuppressions: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Makes a retry safe (1–256 chars, kept 24 hours). The same key with the same body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`. A failed request releases its key. Use a value tied to the thing you are creating, e.g. `onboarding/user_42`. */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -9439,6 +12855,12 @@ export interface operations {
             /** @description Import finished (possibly partially). */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Idempotency-Replay": components["headers"]["Idempotency-Replay"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9454,6 +12876,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9469,6 +12896,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9484,6 +12912,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9494,6 +12923,47 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Idempotency conflict — the key was used with a different body, or the first request with it is still running. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "conflict",
+                     *         "message": "This Idempotency-Key was already used with a different request body. Use a new key for a different request."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9518,6 +12988,11 @@ export interface operations {
             /** @description Metrics. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9553,6 +13028,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9568,6 +13048,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9583,6 +13064,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9593,6 +13075,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9615,6 +13118,11 @@ export interface operations {
             /** @description Series. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9641,6 +13149,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9656,6 +13169,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9671,6 +13185,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9681,6 +13196,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9700,6 +13236,11 @@ export interface operations {
             /** @description Queue health. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9717,6 +13258,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9732,6 +13278,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9747,6 +13294,7 @@ export interface operations {
             /** @description The key is below `write`. Scopes are ranked, so any tier at or above `write` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9757,6 +13305,27 @@ export interface operations {
                      *         "required_scope": "write",
                      *         "key_scope": "read",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9776,6 +13345,11 @@ export interface operations {
             /** @description Settings. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9794,6 +13368,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9809,6 +13388,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9824,6 +13404,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9834,6 +13415,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9898,6 +13500,11 @@ export interface operations {
             /** @description Settings updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9913,6 +13520,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9928,6 +13540,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9943,6 +13556,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9953,6 +13567,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -9972,6 +13607,11 @@ export interface operations {
             /** @description Brand kit and brief. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9985,6 +13625,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10000,6 +13645,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10015,6 +13661,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10025,6 +13672,27 @@ export interface operations {
                      *         "required_scope": "admin",
                      *         "key_scope": "write",
                      *         "request_id": "req_8fK2mQ"
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
                      *       }
                      *     } */
                     "application/json": components["schemas"]["Error"];
@@ -10082,6 +13750,11 @@ export interface operations {
             /** @description Brand updated. */
             200: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10094,6 +13767,11 @@ export interface operations {
             /** @description The request body failed validation. */
             400: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10109,6 +13787,7 @@ export interface operations {
             /** @description Missing or invalid API key. */
             401: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10124,6 +13803,7 @@ export interface operations {
             /** @description The key is below `admin`. Scopes are ranked, so any tier at or above `admin` is accepted. */
             403: {
                 headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10138,6 +13818,375 @@ export interface operations {
                      *     } */
                     "application/json": components["schemas"]["Error"];
                 };
+            };
+            /** @description Rate limited. Back off for `Retry-After` seconds. */
+            429: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
+                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
+                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
+                    "RateLimit-Policy": components["headers"]["RateLimit-Policy"];
+                    "Retry-After": components["headers"]["Retry-After"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /** @example {
+                     *       "error": {
+                     *         "code": "rate_limited",
+                     *         "message": "Too many requests — retry in 12s."
+                     *       }
+                     *     } */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    webhook_email_sent: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailSent"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_delivered: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailDelivered"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_delivery_delayed: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailDeliveryDelayed"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_bounced: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailBounced"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_complained: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailComplained"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_opened: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailOpened"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_clicked: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailClicked"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_unsubscribed: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailUnsubscribed"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_suppressed: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailSuppressed"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_failed: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailFailed"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_email_canceled: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventEmailCanceled"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    webhook_webhook_test: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The delivery id. Identical across retries — dedupe on it. */
+                "webhook-id": string;
+                /** @description Unix seconds. Reject anything more than 5 minutes from now (replay protection). */
+                "webhook-timestamp": string;
+                /** @description Space-separated `v1,<base64 HMAC-SHA256>` signatures of `{webhook-id}.{webhook-timestamp}.{raw body}`, keyed with the base64 part of your `whsec_` secret. Two appear during a secret rotation's grace window; accept either. Verify against the RAW body, before parsing. */
+                "webhook-signature": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEventWebhookTest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. Any 2xx stops retries. */
+            "2XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
