@@ -19,10 +19,16 @@ jobs:
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing (OIDC, no NPM_TOKEN) needs npm >= 11.5.1. Node 22
+      # bundles npm 10, which falls back to token auth and fails with ENEEDAUTH.
+      - run: npm install -g npm@11
+
       - run: npm ci
+
+      - run: npm test
 
       - name: Tag must match package version
         run: |
@@ -36,6 +42,10 @@ jobs:
 
       # `prepublishOnly` regenerates from openapi.json and rebuilds, so a
       # stale dist/ cannot ship. --provenance signs the release back to this
-      # workflow; npm shows it on the package page.
+      # workflow; npm shows it on the package page. It REQUIRES a public repo —
+      # on a private one npm refuses the publish.
+      #
+      # npm has no "pending" trusted publisher: the package must exist before
+      # one can be attached, so the very first version is published by hand.
       - name: Publish
         run: npm publish --provenance --access public
