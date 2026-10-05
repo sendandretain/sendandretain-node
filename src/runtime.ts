@@ -172,3 +172,157 @@ export function suggestedAction(code: string): string | null {
 export function timeoutSignal(timeoutMs = DEFAULT_TIMEOUT_MS): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
+// ── Transport ──────────────────────────────────────────────────────────────
+//
+// A `fetch` that every request goes through: auth, User-Agent, timeout,
+// retries and idempotency, decided once here rather than per method.
+
+/** Default number of RETRIES (so up to three attempts in all). */
+export const DEFAULT_MAX_RETRIES = 2;
+
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE"]);
+/** 429s that are a sending QUOTA, not a throttle: waiting a second changes nothing. */
+const QUOTA_CODES = new Set(["daily_cap", "monthly_cap"]);
+
+export interface TransportOptions {
+  apiKey: string;
+  /** The SDK's own version, for the User-Agent. */
+  version: string;
+  /** Retries on 408/429/5xx and network errors. 0 disables. */
+  maxRetries?: number;
+  /** Per-attempt timeout. */
+  timeoutMs?: number;
+  /** Bring your own fetch (tests, proxies). Defaults to the global one. */
+  fetch?: typeof fetch;
+}
+
+function newIdempotencyKey(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+/**
+ * Milliseconds to wait before retry number `attempt` (1-based).
+ *
+ * `Retry-After` wins when the server sent one. Otherwise exponential backoff
+ * from 500ms, capped at 8s, with full jitter so a fleet of clients that failed
+ * together does not retry together.
+ */
+export function backoffMs(attempt: number, retryAfter: string | null): number {
+  const seconds = retryAfter === null ? NaN : Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, 60_000);
+  const ceiling = Math.min(500 * 2 ** (attempt - 1), 8_000);
+  return Math.round(ceiling / 2 + Math.random() * (ceiling / 2));
+}
+
+const sleep = (ms: number, signal?: AbortSignal | null) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason);
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true }
+    );
+  });
+
+async function isQuota(response: Response): Promise<boolean> {
+  if (response.status !== 429) return false;
+  try {
+    const body = (await response.clone().json()) as { error?: { code?: string } };
+    return QUOTA_CODES.has(body?.error?.code ?? "");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Build the fetch every SDK method uses.
+ *
+ * - **Retries are only ever safe ones.** A GET/PUT/DELETE, or a POST carrying an
+ *   `Idempotency-Key`. Every POST gets a generated key when the caller did not
+ *   pass one, so a retried create can never run twice — the API replays the
+ *   first result instead.
+ * - **A quota is not a throttle.** A 429 `daily_cap` / `monthly_cap` is
+ *   returned at once; retrying it only burns the caller's time.
+ * - **The caller's signal still wins.** Aborting cancels the attempt in flight
+ *   and any wait between attempts.
+ */
+export function createTransport(options: TransportOptions): typeof fetch {
+  const baseFetch = options.fetch ?? globalThis.fetch;
+  const maxRetries = Math.max(0, options.maxRetries ?? DEFAULT_MAX_RETRIES);
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const ua = userAgent(options.version);
+
+  return async (input, init) => {
+    const original = new Request(input, init);
+    const headers = new Headers(original.headers);
+    headers.set("Authorization", `Bearer ${options.apiKey}`);
+    if (!headers.has("User-Agent")) headers.set("User-Agent", ua);
+    if (original.method === "POST" && maxRetries > 0 && !headers.has("Idempotency-Key")) {
+      headers.set("Idempotency-Key", newIdempotencyKey());
+    }
+    const template = new Request(original, { headers });
+    const retryable = IDEMPOTENT_METHODS.has(template.method) || headers.has("Idempotency-Key");
+
+    for (let attempt = 0; ; attempt++) {
+      const signals = [
+        AbortSignal.timeout(timeoutMs),
+        ...(original.signal ? [original.signal] : []),
+      ];
+      const signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0]!;
+      try {
+        const response = await baseFetch(new Request(template.clone(), { signal }));
+        const again =
+          retryable &&
+          attempt < maxRetries &&
+          RETRYABLE_STATUS.has(response.status) &&
+          !(await isQuota(response));
+        if (!again) return response;
+        await sleep(backoffMs(attempt + 1, response.headers.get("Retry-After")), original.signal);
+      } catch (error) {
+        // The caller aborted: stop now, whatever the budget says.
+        if (original.signal?.aborted) throw error;
+        if (!retryable || attempt >= maxRetries) throw error;
+        await sleep(backoffMs(attempt + 1, null), original.signal);
+      }
+    }
+  };
+}
+
+// ── Pagination ─────────────────────────────────────────────────────────────
+
+/** The list envelope every collection answers. */
+export interface ListPage<T> {
+  object: "list";
+  data: T[];
+  has_more: boolean;
+  next_cursor: string | null;
+}
+
+/**
+ * Walk every page of a list, yielding rows.
+ *
+ * `fetchPage` is handed the cursor for the next page (undefined for the first)
+ * and returns the SDK's usual `{ data, error }`. An error mid-walk throws —
+ * an iterator has no other channel — carrying the API's error object.
+ */
+export async function* paginate<T>(
+  fetchPage: (cursor: string | undefined) => Promise<{ data?: ListPage<T>; error?: unknown }>
+): AsyncGenerator<T, void, undefined> {
+  let cursor: string | undefined;
+  for (;;) {
+    const { data, error } = await fetchPage(cursor);
+    if (error || !data) {
+      throw Object.assign(new Error("List request failed while paginating."), { error });
+    }
+    yield* data.data;
+    if (!data.has_more || !data.next_cursor) return;
+    cursor = data.next_cursor;
+  }
+}
