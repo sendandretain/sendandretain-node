@@ -16,11 +16,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sendandretain/sendandretain-node.git"
+    "url": "git+https://github.com/sendretain/sendandretain-node.git"
   },
-  "homepage": "https://github.com/sendandretain/sendandretain-node#readme",
+  "homepage": "https://github.com/sendretain/sendandretain-node#readme",
   "bugs": {
-    "url": "https://github.com/sendandretain/sendandretain-node/issues"
+    "url": "https://github.com/sendretain/sendandretain-node/issues"
   },
   "publishConfig": {
     "access": "public"
