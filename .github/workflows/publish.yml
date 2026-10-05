@@ -40,6 +40,20 @@ jobs:
           fi
           echo "publishing $pkg"
 
+      # A version npm already has cannot be published again. That happens when
+      # a release was published by hand first (npm has no pending trusted
+      # publishers, so a package's first version always is) and its tag is
+      # pushed afterwards to link the release: succeed quietly instead.
+      - name: Skip if this version is already on npm
+        id: existing
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          pkg="$(node -p "require('./package.json').version")"
+          if npm view "$name@$pkg" version >/dev/null 2>&1; then
+            echo "::notice::$name@$pkg is already on npm; nothing to publish"
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # `prepublishOnly` regenerates from openapi.json and rebuilds, so a
       # stale dist/ cannot ship. --provenance signs the release back to this
       # workflow; npm shows it on the package page. It REQUIRES a public repo —
@@ -48,4 +62,5 @@ jobs:
       # npm has no "pending" trusted publisher: the package must exist before
       # one can be attached, so the very first version is published by hand.
       - name: Publish
+        if: steps.existing.outputs.published != 'true'
         run: npm publish --provenance --access public
