@@ -33,7 +33,7 @@ export function resolveApiKey(explicit?: string): string {
   const key = explicit ?? env(API_KEY_ENV_VAR);
   if (!key) {
     throw new Error(
-      `Missing API key. Pass createClient({ apiKey }) or set ${API_KEY_ENV_VAR}.`
+      `Missing API key. Pass { apiKey } to the client or set ${API_KEY_ENV_VAR}.`
     );
   }
   if (!key.startsWith(API_KEY_PREFIX)) {
@@ -321,7 +321,7 @@ export async function* paginate<T>(
     if (error || !data) {
       throw Object.assign(new Error("List request failed while paginating."), { error });
     }
-    yield* data.data;
+    yield* data.data ?? [];
     if (!data.has_more || !data.next_cursor) return;
     cursor = data.next_cursor;
   }
