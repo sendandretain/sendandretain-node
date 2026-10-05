@@ -7,5 +7,5 @@ contact_links:
     url: https://sendandretain.com
     about: Use in-app support — an issue here is public, and those questions are not.
   - name: Security vulnerability
-    url: https://github.com/sendandretain/sendandretain/blob/main/SECURITY.md
+    url: https://github.com/sendretain/sendandretain/blob/main/SECURITY.md
     about: Report privately by email. Never in an issue.
