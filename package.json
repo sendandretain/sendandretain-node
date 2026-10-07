@@ -1,6 +1,6 @@
 {
   "name": "@sendandretain/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The Send & Retain SDK for Node.js \u2014 send email, sync contacts and verify webhooks, fully typed from the OpenAPI spec.",
   "license": "MIT",
   "author": "Send & Retain",
@@ -16,11 +16,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sendandretainhq/sendandretain-node.git"
+    "url": "git+https://github.com/sendandretain/sendandretain-node.git"
   },
-  "homepage": "https://github.com/sendandretainhq/sendandretain-node#readme",
+  "homepage": "https://github.com/sendandretain/sendandretain-node#readme",
   "bugs": {
-    "url": "https://github.com/sendandretainhq/sendandretain-node/issues"
+    "url": "https://github.com/sendandretain/sendandretain-node/issues"
   },
   "publishConfig": {
     "access": "public"

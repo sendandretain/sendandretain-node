@@ -200,8 +200,8 @@ hand-written.
 
 - [API reference](https://sendandretain.com/docs/api)
 - [OpenAPI spec](https://sendandretain.com/openapi.json)
-- [Python SDK](https://github.com/sendandretainhq/sendandretain-py)
-- [Claude Code plugin](https://github.com/sendandretainhq/sendandretain-plugin)
+- [Python SDK](https://github.com/sendandretain/sendandretain-py)
+- [Claude Code plugin](https://github.com/sendandretain/sendandretain-plugin)
 
 ## License
 
