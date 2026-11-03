@@ -71,7 +71,7 @@ export interface paths {
         };
         /**
          * Get message status
-         * @description Returns a message's current status and its provider event timeline. Requires a `write`-scope key.
+         * @description Returns a message's current status, its event timeline, and `wire` — the headers it went out with (and, with `?include=body`, the HTML and text as sent). Requires a `write`-scope key.
          */
         get: operations["getMessage"];
         put?: never;
@@ -262,8 +262,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Edit subject, preview text, or sender
-         * @description The "just fix the email meta" path — no new TSX. Subject and preview-text edits are copy-on-write (a new draft version) and are **auto-published when the template is already published**, so the change actually sends instead of stranding a draft. The sender updates in place.
+         * Edit subject, preview text, sender, or description
+         * @description The "just fix the email meta" path — no new TSX. Subject and preview-text edits are copy-on-write (a new draft version) and are **auto-published when the template is already published**, so the change actually sends instead of stranding a draft. They are built on the **live** version, never on a newer unreviewed draft. The sender and description update in place.
          */
         patch: operations["updateTemplateMeta"];
         trace?: never;
@@ -313,7 +313,7 @@ export interface paths {
         put?: never;
         /**
          * Render a template
-         * @description Compiles and renders a version and returns the HTML, plain text and subject. No side effects — nothing is sent. This is the authoring inner loop: compile and render failures come back as `invalid_request` carrying the verbatim diagnostics, so you can fix the source and retry.
+         * @description Compiles and renders a version and returns the HTML, plain text and subject — by default exactly as a send would deliver it, footer and List-Unsubscribe headers included. No side effects — nothing is sent. This is the authoring inner loop: compile and render failures come back as `invalid_request` carrying the verbatim diagnostics, so you can fix the source and retry.
          */
         post: operations["renderTemplate"];
         delete?: never;
@@ -1170,7 +1170,7 @@ export interface paths {
         };
         /**
          * Get sending guardrails
-         * @description The kill switch, the daily cap, the auto-UTM config, the default locale, and how many messages went out today.
+         * @description The kill switch, the daily cap, the per-contact frequency cap, the auto-UTM config, the default locale, and how many messages went out today.
          */
         get: operations["getProjectSettings"];
         put?: never;
@@ -1179,7 +1179,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Set the kill switch, daily cap, auto-UTM tagging, or default locale
+         * Set the kill switch, daily cap, frequency cap, auto-UTM tagging, or default locale
          * @description `sends_paused: true` stops **all** sending for this project — API, automations and copilot alike — and is re-checked on the worker path, so it stops queued mail too, not just new calls. Because of that it requires `confirm: true`; resuming does not. `utm` configures auto UTM tagging, which is **already on** with sensible defaults: send it only to change the params or to switch tagging off. `default_locale` is the fallback used to pick a template translation when neither the send call nor the contact carries a locale (null = the base template language). Requires an `admin`-scope key.
          */
         patch: operations["updateProjectSettings"];
@@ -1482,13 +1482,13 @@ export interface components {
             /** @enum {string} */
             op: "and" | "or";
             conditions: ({
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             } | components["schemas"]["UpdateAutomation___schema0"])[];
         };
@@ -1496,13 +1496,13 @@ export interface components {
             /** @enum {string} */
             op: "and" | "or";
             conditions: ({
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             } | components["schemas"]["UpdateStep___schema0"])[];
         };
@@ -1510,13 +1510,13 @@ export interface components {
             /** @enum {string} */
             op: "and" | "or";
             conditions: ({
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             } | components["schemas"]["CreateAutomation___schema0"])[];
         };
@@ -1562,7 +1562,7 @@ export interface components {
         } | {
             /** @constant */
             type: "set_attribute";
-            /** @description Attributes to shallow-merge onto the contact. */
+            /** @description Attributes to shallow-merge onto the contact. The value "$now" writes the ISO time the step runs — pair it with `within_days` to ask "did this happen in the last N days?". */
             attributes?: {
                 [key: string]: unknown;
             };
@@ -1630,13 +1630,13 @@ export interface components {
             };
             /** @description Evaluated against contact attributes ⊕ the trigger event. */
             filter?: {
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             }[] | components["schemas"]["CreateAutomation___schema0"];
             /** @description Steps for contacts matching the filter. */
@@ -1648,13 +1648,13 @@ export interface components {
                 key: string;
                 label?: string;
                 filter: {
-                    /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                    /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                     path: string;
                     /**
                      * @default eq
                      * @enum {string}
                      */
-                    op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                    op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                     value?: unknown;
                 }[] | components["schemas"]["CreateAutomation___schema0"];
                 steps?: components["schemas"]["CreateAutomation___schema1"][];
@@ -1708,7 +1708,7 @@ export interface components {
         } | {
             /** @constant */
             type: "set_attribute";
-            /** @description Attributes to shallow-merge onto the contact. */
+            /** @description Attributes to shallow-merge onto the contact. The value "$now" writes the ISO time the step runs — pair it with `within_days` to ask "did this happen in the last N days?". */
             attributes?: {
                 [key: string]: unknown;
             };
@@ -1776,13 +1776,13 @@ export interface components {
             };
             /** @description Evaluated against contact attributes ⊕ the trigger event. */
             filter?: {
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             }[] | components["schemas"]["AddAutomationSteps___schema1"];
             /** @description Steps for contacts matching the filter. */
@@ -1794,13 +1794,13 @@ export interface components {
                 key: string;
                 label?: string;
                 filter: {
-                    /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                    /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                     path: string;
                     /**
                      * @default eq
                      * @enum {string}
                      */
-                    op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                    op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                     value?: unknown;
                 }[] | components["schemas"]["AddAutomationSteps___schema1"];
                 steps?: components["schemas"]["AddAutomationSteps___schema0"][];
@@ -1816,13 +1816,13 @@ export interface components {
             /** @enum {string} */
             op: "and" | "or";
             conditions: ({
-                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                 path: string;
                 /**
                  * @default eq
                  * @enum {string}
                  */
-                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                 value?: unknown;
             } | components["schemas"]["AddAutomationSteps___schema1"])[];
         };
@@ -2299,8 +2299,21 @@ export interface components {
             /** Format: date-time */
             sent_at?: string | null;
             /** Format: date-time */
+            delivered_at?: string | null;
+            /** @description Set on a bounced message, e.g. `hard` or `soft`. */
+            bounce_type?: string | null;
+            /** Format: date-time */
             created_at?: string;
-            /** @description Provider events for this message, oldest first (max 100). */
+            /** @description The message as the provider received it, for a message that went out (null otherwise). `headers` always — including `List-Unsubscribe` and `List-Unsubscribe-Post`; `subject`, `html` and `text` with `?include=body`. Bodies are not archived: this is rebuilt from the stored version and props with the project's CURRENT settings (`reconstructed: true`, explained in `note`). */
+            wire?: {
+                reconstructed?: boolean;
+                note?: string;
+                headers?: Record<string, never>;
+                subject?: string;
+                html?: string;
+                text?: string;
+            } | null;
+            /** @description Events for this message, oldest first (max 100). `sent` and `delivered` are filled in from the message itself when no event row records them. */
             events?: {
                 /** @example delivered */
                 type?: string;
@@ -2955,7 +2968,10 @@ export interface operations {
     };
     getMessage: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `body` to add the sent HTML/text to `wire`. */
+                include?: "body";
+            };
             header?: never;
             path: {
                 /**
@@ -5083,6 +5099,11 @@ export interface operations {
                      * @example snd_2Kp8
                      */
                     sender_id?: string | null;
+                    /**
+                     * @description What the template is for, shown in listings. Not versioned — it changes in place. `""` clears it.
+                     * @example Free-tier limits reminder: 50 ads saved, 5 copilot calls a month.
+                     */
+                    description?: string;
                 };
             };
         };
@@ -5661,6 +5682,16 @@ export interface operations {
                     props?: {
                         [key: string]: unknown;
                     };
+                    /**
+                     * @description Default `true`: the email **as sent** — the compliance footer and unsubscribe link, the watermark, UTM-tagged links, and the `List-Unsubscribe` / `List-Unsubscribe-Post` headers (with a placeholder token that unsubscribes nobody). `false` returns the template's raw output.
+                     * @example true
+                     */
+                    as_sent?: boolean;
+                    /**
+                     * @description Also request every link and image in the rendered email (HEAD, then GET; redirects followed) and return `link_check` with the broken ones. Network calls — slower. Unsubscribe links are skipped.
+                     * @example false
+                     */
+                    check_links?: boolean;
                 };
             };
         };
@@ -5680,10 +5711,15 @@ export interface operations {
                         slug?: string;
                         /** @example 2 */
                         version?: number;
+                        as_sent?: boolean;
                         /** @example Welcome to Acme, Jane */
                         subject?: string;
                         html?: string;
                         text?: string;
+                        /** @description Present when `as_sent`: the headers a send carries, including `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`. */
+                        headers?: Record<string, never>;
+                        /** @description Present with `check_links`: `{ checked, broken: [{ url, kind, status?, error? }], skipped }`. */
+                        link_check?: Record<string, never>;
                         /** @description The props actually rendered with — generated examples when you passed none. */
                         props_used?: Record<string, never>;
                     };
@@ -6284,13 +6320,13 @@ export interface operations {
                      *     ]
                      */
                     trigger_filter?: {
-                        /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                        /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                         path: string;
                         /**
                          * @default eq
                          * @enum {string}
                          */
-                        op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                        op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                         value?: unknown;
                     }[] | components["schemas"]["CreateAutomation___schema0"];
                     /**
@@ -6312,6 +6348,19 @@ export interface operations {
                      * @example subscription.resumed
                      */
                     exit_event?: string;
+                    /** @description Per-exit filters keyed by exit event name, e.g. { "team.plan_changed": [{ path: "event.properties.plan", op: "eq", value: "paid" }] } — that exit then fires only on a paid plan. Each key must also be in exitEvents. */
+                    exit_filters?: {
+                        [key: string]: {
+                            /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                            path: string;
+                            /**
+                             * @default eq
+                             * @enum {string}
+                             */
+                            op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
+                            value?: unknown;
+                        }[] | components["schemas"]["CreateAutomation___schema0"];
+                    };
                     /** @description Allow a contact to enroll again after finishing. */
                     allow_reenrollment?: boolean;
                     reenrollment_cooldown_seconds?: number;
@@ -6485,13 +6534,13 @@ export interface operations {
                         eventName?: string;
                         timeoutSeconds?: number;
                         filter?: {
-                            /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                            /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                             path: string;
                             /**
                              * @default eq
                              * @enum {string}
                              */
-                            op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                            op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                             value?: unknown;
                         }[] | components["schemas"]["UpdateStep___schema0"];
                         /** @enum {string} */
@@ -6503,13 +6552,13 @@ export interface operations {
                             key: string;
                             label?: string;
                             filter: {
-                                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                                /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                                 path: string;
                                 /**
                                  * @default eq
                                  * @enum {string}
                                  */
-                                op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                                op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                                 value?: unknown;
                             }[] | components["schemas"]["UpdateStep___schema0"];
                         }[];
@@ -7316,7 +7365,15 @@ export interface operations {
                         exclusive?: boolean;
                         exit_events?: string[];
                         exit_event?: string | null;
+                        /** @description Per-exit filters keyed by exit event name. An exit listed here ends a run only when the event matches its filter; an exit not listed matches on its name alone. */
+                        exit_filters?: Record<string, never>;
+                        /** @description True when this automation is exempt from the project's per-contact frequency cap. */
+                        bypass_frequency_cap?: boolean;
                         allow_reenrollment?: boolean;
+                        /** @example 0 */
+                        reenrollment_cooldown_seconds?: number;
+                        trigger_schedule?: Record<string, never> | null;
+                        settings?: Record<string, never>;
                         /** Format: date-time */
                         created_at?: string;
                         /** Format: date-time */
@@ -7331,7 +7388,19 @@ export interface operations {
                             type?: string;
                             delay_seconds?: number | null;
                             template_slug?: string | null;
+                            /** @description What a send step sends: the template's LIVE version, against the latest base version. `has_unpublished_changes` means a newer draft exists that no contact receives until it is published. */
+                            template?: {
+                                live_version?: number | null;
+                                live_subject?: string | null;
+                                latest_version?: number | null;
+                                latest_subject?: string | null;
+                                has_unpublished_changes?: boolean;
+                            } | null;
                             config?: Record<string, never> | null;
+                            props_overrides?: Record<string, never>;
+                            variants?: unknown[] | null;
+                            send_window?: Record<string, never> | null;
+                            skipped?: boolean;
                         }[];
                     };
                 };
@@ -7568,13 +7637,13 @@ export interface operations {
                     trigger_event?: string;
                     /** @description New filter, or null to clear it (every occurrence enrolls). */
                     trigger_filter?: ({
-                        /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                        /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
                         path: string;
                         /**
                          * @default eq
                          * @enum {string}
                          */
-                        op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                        op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                         value?: unknown;
                     }[] | components["schemas"]["UpdateAutomation___schema0"]) | null;
                     /**
@@ -7595,6 +7664,19 @@ export interface operations {
                      * @example subscription.resumed
                      */
                     exit_event?: string | null;
+                    exit_filters?: {
+                        [key: string]: {
+                            /** @description contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt. */
+                            path: string;
+                            /**
+                             * @default eq
+                             * @enum {string}
+                             */
+                            op?: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
+                            value?: unknown;
+                        }[] | components["schemas"]["UpdateAutomation___schema0"];
+                    } | null;
+                    bypass_frequency_cap?: boolean;
                     allow_reenrollment?: boolean;
                     reenrollment_cooldown_seconds?: number;
                 };
@@ -12028,7 +12110,7 @@ export interface operations {
                     filter: {
                         path: string;
                         /** @enum {string} */
-                        op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                        op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                         value?: unknown;
                     }[];
                 };
@@ -12277,7 +12359,7 @@ export interface operations {
                     filter?: {
                         path: string;
                         /** @enum {string} */
-                        op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "within_days" | "older_than_days";
+                        op: "eq" | "neq" | "exists" | "not_exists" | "in" | "gt" | "lt" | "contains" | "not_contains" | "within_days" | "older_than_days";
                         value?: unknown;
                     }[];
                 };
@@ -13360,6 +13442,7 @@ export interface operations {
                         daily_send_cap?: number;
                         utm?: Record<string, never> | null;
                         default_locale?: string | null;
+                        frequency_cap?: Record<string, never> | null;
                         /** @example 41 */
                         sent_today?: number;
                     };
@@ -13491,6 +13574,19 @@ export interface operations {
                      * @example fr
                      */
                     default_locale?: string | null;
+                    /**
+                     * @description Per-contact ceiling on **lifecycle** email across every automation — `{ max: 1, window_hours: 24 }` is at most one a day. A capped automation send is deferred until the window has room (then clamped to the step's send window), never skipped. Transactional templates are never held back, and direct API sends are not held back either, though they count toward the cap. `null` clears it.
+                     * @example {
+                     *       "max": 1,
+                     *       "window_hours": 24
+                     *     }
+                     */
+                    frequency_cap?: {
+                        /** @default true */
+                        enabled?: boolean;
+                        max: number;
+                        window_hours: number;
+                    } | null;
                     /** @description Required (`true`) to pause. Resuming needs no confirmation. */
                     confirm?: boolean;
                 };
@@ -13514,6 +13610,7 @@ export interface operations {
                         daily_send_cap?: number;
                         utm?: Record<string, never> | null;
                         default_locale?: string | null;
+                        frequency_cap?: Record<string, never> | null;
                     };
                 };
             };
