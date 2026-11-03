@@ -2,10 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Send & Retain API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Send transactional and marketing email, sync contacts, and emit events that drive automations. One recipient per send — there are no bulk campaigns. Authenticate with a per-project API key (`aem_…`).\n\n**Every response** — success or error — carries `X-Request-Id`. It echoes your own `X-Request-Id` when you send a sane one (letters, digits, `.`, `_`, `-`, up to 128 chars) and is otherwise generated. Errors repeat it in the body as `request_id`, so pasting the JSON into a support request is enough to find the call.\n\n**Errors** are always `{ error: { code, message } }`. `code` is a stable identifier to branch on; `message` is human-readable and safe to log but not to branch on. The HTTP status is derived from `code`, never inferred from the message.\n\n**Rate limits.** Every response carries `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset` (seconds until the window refills) and `RateLimit-Policy`; a 429 adds `Retry-After` and `retry_after_ms`. Treat these as a best-effort backstop against runaway loops, not a quota: the limiter is per-instance, so the effective ceiling across a horizontally-scaled deployment is higher than the advertised number and is not currently enforced globally.\n\n**The send path is not on the per-key limiter.** `POST /emails`, `POST /emails/batch`, `PATCH` / `DELETE /emails/{id}` and `POST /events` carry no `RateLimit-*` headers: they are governed by the project's sending caps (`429` with code `daily_cap` / `monthly_cap` — a quota, not a throttle; branch on the code) and a per-provider throttle that queues rather than refuses.\n\n**Idempotency.** Every create — sends included — takes an `Idempotency-Key` header (1–256 chars, kept 24 hours). The same key and body replays the first success with `Idempotency-Replay: true`; the same key with a different body, or while the first request is still running, is `409 conflict`.\n\n**Lists** answer `{ object: \"list\", data, has_more, next_cursor }`. Pass `next_cursor` back as `?cursor=` until `has_more` is false. `?before=` still works where it existed and is deprecated.\n\n**Webhooks.** The events we POST to your endpoints are documented under `webhooks`, one schema per event type, discriminated on `type`.",
     "x-operation-digest": "9cc8aa0e6b29",
-    "x-content-digest": "3c9ac6e3304a",
+    "x-content-digest": "7a24497c7cca",
     "x-generated-from": "lib/openapi/registry.ts"
   },
   "servers": [
@@ -815,7 +815,7 @@
                     "path": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                     },
                     "op": {
                       "default": "eq",
@@ -829,6 +829,7 @@
                         "gt",
                         "lt",
                         "contains",
+                        "not_contains",
                         "within_days",
                         "older_than_days"
                       ]
@@ -873,7 +874,7 @@
                     "path": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                     },
                     "op": {
                       "default": "eq",
@@ -887,6 +888,7 @@
                         "gt",
                         "lt",
                         "contains",
+                        "not_contains",
                         "within_days",
                         "older_than_days"
                       ]
@@ -931,7 +933,7 @@
                     "path": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                     },
                     "op": {
                       "default": "eq",
@@ -945,6 +947,7 @@
                         "gt",
                         "lt",
                         "contains",
+                        "not_contains",
                         "within_days",
                         "older_than_days"
                       ]
@@ -1125,7 +1128,7 @@
                 "const": "set_attribute"
               },
               "attributes": {
-                "description": "Attributes to shallow-merge onto the contact.",
+                "description": "Attributes to shallow-merge onto the contact. The value \"$now\" writes the ISO time the step runs — pair it with `within_days` to ask \"did this happen in the last N days?\".",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -1345,7 +1348,7 @@
                         "path": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                          "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                         },
                         "op": {
                           "default": "eq",
@@ -1359,6 +1362,7 @@
                             "gt",
                             "lt",
                             "contains",
+                            "not_contains",
                             "within_days",
                             "older_than_days"
                           ]
@@ -1417,7 +1421,7 @@
                               "path": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                               },
                               "op": {
                                 "default": "eq",
@@ -1431,6 +1435,7 @@
                                   "gt",
                                   "lt",
                                   "contains",
+                                  "not_contains",
                                   "within_days",
                                   "older_than_days"
                                 ]
@@ -1649,7 +1654,7 @@
                 "const": "set_attribute"
               },
               "attributes": {
-                "description": "Attributes to shallow-merge onto the contact.",
+                "description": "Attributes to shallow-merge onto the contact. The value \"$now\" writes the ISO time the step runs — pair it with `within_days` to ask \"did this happen in the last N days?\".",
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -1869,7 +1874,7 @@
                         "path": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                          "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                         },
                         "op": {
                           "default": "eq",
@@ -1883,6 +1888,7 @@
                             "gt",
                             "lt",
                             "contains",
+                            "not_contains",
                             "within_days",
                             "older_than_days"
                           ]
@@ -1941,7 +1947,7 @@
                               "path": {
                                 "type": "string",
                                 "minLength": 1,
-                                "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                               },
                               "op": {
                                 "default": "eq",
@@ -1955,6 +1961,7 @@
                                   "gt",
                                   "lt",
                                   "contains",
+                                  "not_contains",
                                   "within_days",
                                   "older_than_days"
                                 ]
@@ -2037,7 +2044,7 @@
                     "path": {
                       "type": "string",
                       "minLength": 1,
-                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                      "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                     },
                     "op": {
                       "default": "eq",
@@ -2051,6 +2058,7 @@
                         "gt",
                         "lt",
                         "contains",
+                        "not_contains",
                         "within_days",
                         "older_than_days"
                       ]
@@ -3411,13 +3419,54 @@
             ],
             "format": "date-time"
           },
+          "delivered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "bounce_type": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Set on a bounced message, e.g. `hard` or `soft`."
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
           },
+          "wire": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The message as the provider received it, for a message that went out (null otherwise). `headers` always — including `List-Unsubscribe` and `List-Unsubscribe-Post`; `subject`, `html` and `text` with `?include=body`. Bodies are not archived: this is rebuilt from the stored version and props with the project's CURRENT settings (`reconstructed: true`, explained in `note`).",
+            "properties": {
+              "reconstructed": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string"
+              },
+              "headers": {
+                "type": "object"
+              },
+              "subject": {
+                "type": "string"
+              },
+              "html": {
+                "type": "string"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          },
           "events": {
             "type": "array",
-            "description": "Provider events for this message, oldest first (max 100).",
+            "description": "Events for this message, oldest first (max 100). `sent` and `delivered` are filled in from the message itself when no event row records them.",
             "items": {
               "type": "object",
               "properties": {
@@ -4668,7 +4717,7 @@
           "Emails"
         ],
         "summary": "Get message status",
-        "description": "Returns a message's current status and its provider event timeline. Requires a `write`-scope key.",
+        "description": "Returns a message's current status, its event timeline, and `wire` — the headers it went out with (and, with `?include=body`, the HTML and text as sent). Requires a `write`-scope key.",
         "parameters": [
           {
             "name": "id",
@@ -4679,6 +4728,18 @@
               "type": "string"
             },
             "example": "msg_3aF9c1"
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "description": "`body` to add the sent HTML/text to `wire`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "body"
+              ]
+            }
           }
         ],
         "responses": {
@@ -8210,8 +8271,8 @@
         "tags": [
           "Templates"
         ],
-        "summary": "Edit subject, preview text, or sender",
-        "description": "The \"just fix the email meta\" path — no new TSX. Subject and preview-text edits are copy-on-write (a new draft version) and are **auto-published when the template is already published**, so the change actually sends instead of stranding a draft. The sender updates in place.",
+        "summary": "Edit subject, preview text, sender, or description",
+        "description": "The \"just fix the email meta\" path — no new TSX. Subject and preview-text edits are copy-on-write (a new draft version) and are **auto-published when the template is already published**, so the change actually sends instead of stranding a draft. They are built on the **live** version, never on a newer unreviewed draft. The sender and description update in place.",
         "requestBody": {
           "required": true,
           "content": {
@@ -8251,6 +8312,14 @@
                     "description": "Sender identity for this template. `null` resets to the project default sender.",
                     "examples": [
                       "snd_2Kp8"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "What the template is for, shown in listings. Not versioned — it changes in place. `\"\"` clears it.",
+                    "examples": [
+                      "Free-tier limits reminder: 50 ads saved, 5 copilot calls a month."
                     ]
                   }
                 }
@@ -9200,7 +9269,7 @@
           "Templates"
         ],
         "summary": "Render a template",
-        "description": "Compiles and renders a version and returns the HTML, plain text and subject. No side effects — nothing is sent. This is the authoring inner loop: compile and render failures come back as `invalid_request` carrying the verbatim diagnostics, so you can fix the source and retry.",
+        "description": "Compiles and renders a version and returns the HTML, plain text and subject — by default exactly as a send would deliver it, footer and List-Unsubscribe headers included. No side effects — nothing is sent. This is the authoring inner loop: compile and render failures come back as `invalid_request` carrying the verbatim diagnostics, so you can fix the source and retry.",
         "requestBody": {
           "required": false,
           "content": {
@@ -9230,6 +9299,20 @@
                         "firstName": "Jane"
                       }
                     ]
+                  },
+                  "as_sent": {
+                    "type": "boolean",
+                    "description": "Default `true`: the email **as sent** — the compliance footer and unsubscribe link, the watermark, UTM-tagged links, and the `List-Unsubscribe` / `List-Unsubscribe-Post` headers (with a placeholder token that unsubscribes nobody). `false` returns the template's raw output.",
+                    "examples": [
+                      true
+                    ]
+                  },
+                  "check_links": {
+                    "type": "boolean",
+                    "description": "Also request every link and image in the rendered email (HEAD, then GET; redirects followed) and return `link_check` with the broken ones. Network calls — slower. Unsubscribe links are skipped.",
+                    "examples": [
+                      false
+                    ]
                   }
                 }
               },
@@ -9258,6 +9341,9 @@
                         2
                       ]
                     },
+                    "as_sent": {
+                      "type": "boolean"
+                    },
                     "subject": {
                       "type": "string",
                       "examples": [
@@ -9269,6 +9355,14 @@
                     },
                     "text": {
                       "type": "string"
+                    },
+                    "headers": {
+                      "type": "object",
+                      "description": "Present when `as_sent`: the headers a send carries, including `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click`."
+                    },
+                    "link_check": {
+                      "type": "object",
+                      "description": "Present with `check_links`: `{ checked, broken: [{ url, kind, status?, error? }], skipped }`."
                     },
                     "props_used": {
                       "type": "object",
@@ -10045,7 +10139,7 @@
                             "path": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                              "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                             },
                             "op": {
                               "default": "eq",
@@ -10059,6 +10153,7 @@
                                 "gt",
                                 "lt",
                                 "contains",
+                                "not_contains",
                                 "within_days",
                                 "older_than_days"
                               ]
@@ -10119,6 +10214,55 @@
                     "examples": [
                       "subscription.resumed"
                     ]
+                  },
+                  "exit_filters": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "maxLength": 120
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                              },
+                              "op": {
+                                "default": "eq",
+                                "type": "string",
+                                "enum": [
+                                  "eq",
+                                  "neq",
+                                  "exists",
+                                  "not_exists",
+                                  "in",
+                                  "gt",
+                                  "lt",
+                                  "contains",
+                                  "not_contains",
+                                  "within_days",
+                                  "older_than_days"
+                                ]
+                              },
+                              "value": {}
+                            },
+                            "required": [
+                              "path"
+                            ]
+                          }
+                        },
+                        {
+                          "$ref": "#/components/schemas/CreateAutomation___schema0"
+                        }
+                      ]
+                    },
+                    "description": "Per-exit filters keyed by exit event name, e.g. { \"team.plan_changed\": [{ path: \"event.properties.plan\", op: \"eq\", value: \"paid\" }] } — that exit then fires only on a paid plan. Each key must also be in exitEvents."
                   },
                   "allow_reenrollment": {
                     "type": "boolean",
@@ -11247,7 +11391,7 @@
                                 "path": {
                                   "type": "string",
                                   "minLength": 1,
-                                  "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                  "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                                 },
                                 "op": {
                                   "default": "eq",
@@ -11261,6 +11405,7 @@
                                     "gt",
                                     "lt",
                                     "contains",
+                                    "not_contains",
                                     "within_days",
                                     "older_than_days"
                                   ]
@@ -11318,7 +11463,7 @@
                                       "path": {
                                         "type": "string",
                                         "minLength": 1,
-                                        "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                        "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                                       },
                                       "op": {
                                         "default": "eq",
@@ -11332,6 +11477,7 @@
                                           "gt",
                                           "lt",
                                           "contains",
+                                          "not_contains",
                                           "within_days",
                                           "older_than_days"
                                         ]
@@ -12220,8 +12366,31 @@
                         "null"
                       ]
                     },
+                    "exit_filters": {
+                      "type": "object",
+                      "description": "Per-exit filters keyed by exit event name. An exit listed here ends a run only when the event matches its filter; an exit not listed matches on its name alone."
+                    },
+                    "bypass_frequency_cap": {
+                      "type": "boolean",
+                      "description": "True when this automation is exempt from the project's per-contact frequency cap."
+                    },
                     "allow_reenrollment": {
                       "type": "boolean"
+                    },
+                    "reenrollment_cooldown_seconds": {
+                      "type": "integer",
+                      "examples": [
+                        0
+                      ]
+                    },
+                    "trigger_schedule": {
+                      "type": [
+                        "object",
+                        "null"
+                      ]
+                    },
+                    "settings": {
+                      "type": "object"
                     },
                     "created_at": {
                       "type": "string",
@@ -12275,11 +12444,65 @@
                               "null"
                             ]
                           },
+                          "template": {
+                            "type": [
+                              "object",
+                              "null"
+                            ],
+                            "description": "What a send step sends: the template's LIVE version, against the latest base version. `has_unpublished_changes` means a newer draft exists that no contact receives until it is published.",
+                            "properties": {
+                              "live_version": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "live_subject": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "latest_version": {
+                                "type": [
+                                  "integer",
+                                  "null"
+                                ]
+                              },
+                              "latest_subject": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "has_unpublished_changes": {
+                                "type": "boolean"
+                              }
+                            }
+                          },
                           "config": {
                             "type": [
                               "object",
                               "null"
                             ]
+                          },
+                          "props_overrides": {
+                            "type": "object"
+                          },
+                          "variants": {
+                            "type": [
+                              "array",
+                              "null"
+                            ]
+                          },
+                          "send_window": {
+                            "type": [
+                              "object",
+                              "null"
+                            ]
+                          },
+                          "skipped": {
+                            "type": "boolean"
                           }
                         }
                       }
@@ -12504,7 +12727,7 @@
                                 "path": {
                                   "type": "string",
                                   "minLength": 1,
-                                  "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                  "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
                                 },
                                 "op": {
                                   "default": "eq",
@@ -12518,6 +12741,7 @@
                                     "gt",
                                     "lt",
                                     "contains",
+                                    "not_contains",
                                     "within_days",
                                     "older_than_days"
                                   ]
@@ -12587,6 +12811,65 @@
                     "examples": [
                       "subscription.resumed"
                     ]
+                  },
+                  "exit_filters": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "maxLength": 120
+                        },
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "contact.attributes.<key>, contact.engagement.<key>, contact.subscriptionStatus, contact.tags (with op contains / not_contains and a tag as value), or event.properties.<key> (bare = event property). Engagement fields: emailsReceived, emailsSinceEngaged, daysSinceEngaged, openCount, clickCount, openRate, clickRate, lastOpenedAt, lastClickedAt."
+                                  },
+                                  "op": {
+                                    "default": "eq",
+                                    "type": "string",
+                                    "enum": [
+                                      "eq",
+                                      "neq",
+                                      "exists",
+                                      "not_exists",
+                                      "in",
+                                      "gt",
+                                      "lt",
+                                      "contains",
+                                      "not_contains",
+                                      "within_days",
+                                      "older_than_days"
+                                    ]
+                                  },
+                                  "value": {}
+                                },
+                                "required": [
+                                  "path"
+                                ]
+                              }
+                            },
+                            {
+                              "$ref": "#/components/schemas/UpdateAutomation___schema0"
+                            }
+                          ]
+                        },
+                        "description": "Per-exit filters keyed by exit event name, e.g. { \"team.plan_changed\": [{ path: \"event.properties.plan\", op: \"eq\", value: \"paid\" }] } — that exit then fires only on a paid plan. Each key must also be in exitEvents."
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "bypass_frequency_cap": {
+                    "type": "boolean"
                   },
                   "allow_reenrollment": {
                     "type": "boolean"
@@ -20588,6 +20871,7 @@
                             "gt",
                             "lt",
                             "contains",
+                            "not_contains",
                             "within_days",
                             "older_than_days"
                           ]
@@ -21114,6 +21398,7 @@
                             "gt",
                             "lt",
                             "contains",
+                            "not_contains",
                             "within_days",
                             "older_than_days"
                           ]
@@ -23187,7 +23472,7 @@
           "Settings"
         ],
         "summary": "Get sending guardrails",
-        "description": "The kill switch, the daily cap, the auto-UTM config, the default locale, and how many messages went out today.",
+        "description": "The kill switch, the daily cap, the per-contact frequency cap, the auto-UTM config, the default locale, and how many messages went out today.",
         "responses": {
           "200": {
             "description": "Settings.",
@@ -23217,6 +23502,12 @@
                     "default_locale": {
                       "type": [
                         "string",
+                        "null"
+                      ]
+                    },
+                    "frequency_cap": {
+                      "type": [
+                        "object",
                         "null"
                       ]
                     },
@@ -23377,7 +23668,7 @@
         "tags": [
           "Settings"
         ],
-        "summary": "Set the kill switch, daily cap, auto-UTM tagging, or default locale",
+        "summary": "Set the kill switch, daily cap, frequency cap, auto-UTM tagging, or default locale",
         "description": "`sends_paused: true` stops **all** sending for this project — API, automations and copilot alike — and is re-checked on the worker path, so it stops queued mail too, not just new calls. Because of that it requires `confirm: true`; resuming does not. `utm` configures auto UTM tagging, which is **already on** with sensible defaults: send it only to change the params or to switch tagging off. `default_locale` is the fallback used to pick a template translation when neither the send call nor the contact carries a locale (null = the base template language). Requires an `admin`-scope key.",
         "requestBody": {
           "required": true,
@@ -23462,6 +23753,43 @@
                       "fr"
                     ]
                   },
+                  "frequency_cap": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "default": true,
+                            "type": "boolean"
+                          },
+                          "max": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50
+                          },
+                          "window_hours": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 720
+                          }
+                        },
+                        "required": [
+                          "max",
+                          "window_hours"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Per-contact ceiling on **lifecycle** email across every automation — `{ max: 1, window_hours: 24 }` is at most one a day. A capped automation send is deferred until the window has room (then clamped to the step's send window), never skipped. Transactional templates are never held back, and direct API sends are not held back either, though they count toward the cap. `null` clears it.",
+                    "examples": [
+                      {
+                        "max": 1,
+                        "window_hours": 24
+                      }
+                    ]
+                  },
                   "confirm": {
                     "type": "boolean",
                     "description": "Required (`true`) to pause. Resuming needs no confirmation."
@@ -23501,6 +23829,12 @@
                     "default_locale": {
                       "type": [
                         "string",
+                        "null"
+                      ]
+                    },
+                    "frequency_cap": {
+                      "type": [
+                        "object",
                         "null"
                       ]
                     }
