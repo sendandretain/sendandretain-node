@@ -15,7 +15,7 @@ import {
 import type { components, paths } from "./schema.js";
 
 /** Kept in step with package.json by `__tests__/client.test.ts`. */
-export const VERSION = "0.2.1";
+export const VERSION = "0.3.0";
 
 // ── Types derived from the spec ────────────────────────────────────────────
 //

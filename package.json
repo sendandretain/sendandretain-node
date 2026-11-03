@@ -1,6 +1,6 @@
 {
   "name": "@sendandretain/sdk",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "The Send & Retain SDK for Node.js \u2014 send email, sync contacts and verify webhooks, fully typed from the OpenAPI spec.",
   "license": "MIT",
   "author": "Send & Retain",
